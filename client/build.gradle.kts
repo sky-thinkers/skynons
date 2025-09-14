@@ -34,4 +34,7 @@ kotlin {
     }
 }
 
-
+tasks.register<Task>("test") {
+    description = "Runs all tests"
+    dependsOn(tasks.getByName("allTests"))
+}
