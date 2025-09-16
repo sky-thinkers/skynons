@@ -1,4 +1,4 @@
-package com.skythinkers.skynons
+package com.skythinkers.skynons.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.skythinkers.skynons.Greeting
 import org.jetbrains.compose.resources.painterResource
 
 import skynons.client.generated.resources.Res
