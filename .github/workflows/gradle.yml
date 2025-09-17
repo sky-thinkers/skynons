@@ -30,15 +30,15 @@ jobs:
       run: ./gradlew test
 
     - name: Build server distribution
-      if: ${{ github.event == 'push' && github.ref == 'master' }}
+      if: ${{ github.event == 'push' && github.ref == 'refs/heads/master' }}
       run: ./gradlew :server:distZip
 
     - name: Build client distribution
-      if: ${{ github.event == 'push' && github.ref == 'master' }}
+      if: ${{ github.event == 'push' && github.ref == 'refs/heads/master' }}
       run: ./gradlew :client:wasmJsBrowserDistribution
 
     - name: Publish server artifact
-      if: ${{ github.event == 'push' && github.ref == 'master' }}
+      if: ${{ github.event == 'push' && github.ref == 'refs/heads/master' }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: server
@@ -46,7 +46,7 @@ jobs:
         if-no-files-found: error
 
     - name: Publish client artifact
-      if: ${{ github.event == 'push' && github.ref == 'master' }}
+      if: ${{ github.event == 'push' && github.ref == 'refs/heads/master' }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: client
