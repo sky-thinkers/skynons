@@ -1,0 +1,60 @@
+services:
+  client:
+    build:
+      context: .
+      cache_from:
+        - type=local,src=build/docker-cache
+      cache_to:
+        - type=local,dest=build/docker-cache
+      target: client
+    depends_on:
+      - server
+    ports:
+      - ${CLIENT_PORT}:8080
+    networks:
+      - skynons
+    environment:
+      - SERVER_ADDRESS=${SERVER_ADDRESS}
+
+  server:
+    build:
+      context: .
+      cache_from:
+        - type=local,src=build/docker-cache
+      cache_to:
+        - type=local,dest=build/docker-cache
+      target: server
+    depends_on:
+      db:
+        condition: service_started
+    ports:
+      - 127.0.0.1:${SERVER_PORT}:${SERVER_PORT}
+    networks:
+      - skynons
+    environment:
+      - DB_URL=${DB_URL}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=${SERVER_PORT}
+      - DB_EMBEDDED=false
+
+  db:
+    image: postgres:16.1
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - 127.0.0.1:${DB_PORT}:5432
+    networks:
+      - skynons
+
+volumes:
+  db-data: {}
+networks:
+  skynons:
+    name: skynons_network
+    driver: bridge
