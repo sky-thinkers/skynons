@@ -26,10 +26,6 @@ dependencies {
     testImplementation(libs.kotlin.test.junit)
 }
 
-tasks.named<Task>("build") {
-    dependsOn(tasks["compileBackend"])
-}
-
 tasks.register<Exec>("setupBackedCompiler") {
     commandLine("cmake", "-DCMAKE_BUILD_TYPE=Debug", "-Bbuild")
     workingDir(file("../backend"))
@@ -41,6 +37,6 @@ tasks.register<Exec>("compileBackend") {
     workingDir(file("../backend"))
 }
 
-tasks.named<Task>("run") {
+tasks.named<Task>("build") {
     dependsOn(tasks["compileBackend"])
 }
