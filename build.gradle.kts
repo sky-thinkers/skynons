@@ -8,3 +8,20 @@ plugins {
 
 group = "com.skythinkers.skynons"
 version = "0.0.1"
+
+tasks.register<Exec>("setupBackendCmakeProject") {
+    group = "build"
+    description = "Setup backend cmake build"
+
+    workingDir("backend")
+    commandLine("cmake", "-DCMAKE_BUILD_TYPE=Release", "-Bbuild")
+}
+
+tasks.register<Exec>("compileBackend") {
+    group = "build"
+    description = "Build backend"
+    dependsOn(tasks["setupBackendCmakeProject"])
+
+    workingDir("backend")
+    commandLine("cmake", "--build", "build", "-j8")
+}

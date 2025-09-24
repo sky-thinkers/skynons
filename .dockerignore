@@ -10,6 +10,8 @@ docker-compose.yml
 .gradle
 .kotlin/
 build/
+*/build/
+/post-checkout.*
 
 ### STS ###
 .apt_generated

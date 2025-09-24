@@ -1,0 +1,48 @@
+presets:
+  link:
+    default:
+      latency: 0ns
+      throughput: 100Gbps
+      ingress_buffer_size: 4096B
+      egress_buffer_size: 4096B
+
+connections:
+  conn1:
+    sender_id: sender
+    receiver_id: receiver
+    packets_to_send: 50
+    mplb: round_robin
+    flows:
+      flow1:
+        type: tcp
+        packet_size: 64B
+        cc:
+          type: basic
+
+hosts:
+  sender:
+  receiver:
+
+packet-spraying:
+  type: ecmp
+
+switches:
+  bus:
+    ecn:
+      min: 0.2
+      max: 0.3
+      probability: 1.0
+
+links:
+  link1:
+    from: sender
+    to: bus
+  link2:
+    from: bus
+    to: sender
+  link3:
+    from: bus
+    to: receiver
+  link4:
+    from: receiver
+    to: bus
