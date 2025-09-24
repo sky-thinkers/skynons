@@ -28,14 +28,35 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+      # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
+      # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+
+    - name: Generate backend hash
+      id: backend-hash
+      uses: Andthehand/submodule-version-hash-action@ba59f355ab2f339437116a0ff10468543cd4eb13 # v1.0.0
+      with:
+        path: 'backend'
+
+    - name: Cache backend
+      id: restore-cached-backend
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: backend/build/backend
+        key: ${{ runner.os }}-${{ steps.backend-hash.outputs.sha256 }}-backend
+
     - name: Build backend
+      if: steps.restore-cached-backend.outputs.cache-hit != 'true'
       working-directory: backend
       run: cmake -DCMAKE_BUILD_TYPE=Release -Bbuild && cmake --build build -j8
 
-    # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
-    # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+    - name: Save backend
+      id: cache-primes-save
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: backend/build/backend
+        key: ${{ runner.os }}-${{ steps.backend-hash.outputs.sha256 }}-backend
 
     - name: Test with Gradle Wrapper
       run: ./gradlew test
@@ -47,6 +68,13 @@ jobs:
     - name: Build client distribution
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
       run: ./gradlew :client:wasmJsBrowserDistribution
+
+    - name: Publish test results
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: test-results
+        path: ./*/build/reports/tests/test/index.html
 
     - name: Publish backend artifact
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}

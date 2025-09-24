@@ -2,7 +2,6 @@ package com.skythinkers.skynons
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
@@ -25,7 +24,7 @@ fun Application.configureRouting() {
 
                     tempSimulationConfig.writeText("$text\n")
 
-                    // needs for parsing on back
+                    // needed for parsing on back
                     tempSimulationConfig.appendText(
                         "topology_config_path: ${tempSimulationConfig.absolutePathString()}\n"
                     )
@@ -38,35 +37,36 @@ fun Application.configureRouting() {
                             tempSimulationConfig.absolutePathString(),
                             "--output-dir",
                             tempOutputDirectory.absolutePathString()
-                            )
                         )
+                    )
                     val result = process.waitFor()
                     if (result != 0) {
                         val stderrReader = BufferedReader(InputStreamReader(process.errorStream))
                         val stderrLines = stderrReader.readLines()
                         call.respond(
                             HttpStatusCode.BadRequest,
-                            "Backend error:\n ${stderrLines.joinToString(separator="\n")}"
+                            "Backend error:\n ${stderrLines.joinToString(separator = "\n")}"
                         )
                     }
 
-                    val BASENAMES = listOf(
+                    val baseNames = listOf(
                         "cwnd.svg",
                         "packet_reordering.svg",
                         "rate.svg",
                         "rtt.svg"
                     )
 
-                    val data = MultiPartFormDataContent ( formData {
-                        BASENAMES.forEach() {basename -> append(
-                            basename,
-                            Path(tempOutputDirectory.pathString, basename).readBytes(),
-                            Headers.build {
-                                append(HttpHeaders.ContentType, "image/svg")
-                                append(HttpHeaders.ContentDisposition, "filename=\"$basename\"")
-                            })
+                    val data = MultiPartFormDataContent(formData {
+                        baseNames.forEach { basename ->
+                            append(
+                                basename,
+                                Path(tempOutputDirectory.pathString, basename).readBytes(),
+                                Headers.build {
+                                    append(HttpHeaders.ContentType, "image/svg")
+                                    append(HttpHeaders.ContentDisposition, "filename=\"$basename\"")
+                                })
                         }
-                    } )
+                    })
 
                     call.respond(HttpStatusCode.OK, data)
 
