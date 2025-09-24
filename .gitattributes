@@ -1,1 +1,3 @@
-/nginx/ text=auto
+/nginx/ text=auto eol=lf
+/gradlew text eol=lf
+/gradlew.bat text eol=crlf
