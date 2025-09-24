@@ -15,6 +15,7 @@ import java.io.InputStreamReader
 import java.lang.Runtime
 
 fun Application.configureRouting() {
+    val nonsPath = System.getenv("NONS_PATH")?.takeUnless(String::isEmpty) ?: "../backend/build/nons"
     routing {
         route("/api/v0") {
             post("/simulate") {
@@ -32,7 +33,7 @@ fun Application.configureRouting() {
                     val tempOutputDirectory = createTempDirectory("output")
                     val process = Runtime.getRuntime().exec(
                         arrayOf(
-                            "../backend/build/nons",
+                            nonsPath,
                             "-c",
                             tempSimulationConfig.absolutePathString(),
                             "--output-dir",

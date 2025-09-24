@@ -28,17 +28,3 @@ dependencies {
 
 }
 
-tasks.register<Exec>("setupBackedCompiler") {
-    commandLine("cmake", "-DCMAKE_BUILD_TYPE=Debug", "-Bbuild")
-    workingDir(file("../backend"))
-}
-
-tasks.register<Exec>("compileBackend") {
-    dependsOn(tasks["setupBackedCompiler"])
-    commandLine("cmake", "--build", "build", "-j", "8")
-    workingDir(file("../backend"))
-}
-
-tasks.named<Task>("build") {
-    dependsOn(tasks["compileBackend"])
-}
