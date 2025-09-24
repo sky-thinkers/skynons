@@ -3,7 +3,6 @@ package com.skythinkers.skynons
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
-import kotlin.io.path.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -15,16 +14,14 @@ class ApplicationTest {
             module()
         }
 
-        val config_path = Path("src/test/kotlin/config.yml")
+        val configUrl = javaClass.getResource("/config.yml")
+            ?: throw AssertionError("Test config not found")
 
-        println(config_path.readText())
-
-        val responce = client.post("/api/v0/simulate") {
+        val response = client.post("/api/v0/simulate") {
             contentType(ContentType.Application.Yaml)
-            setBody(config_path.readText())
+            setBody(configUrl.readText())
         }
 
-        assertEquals(responce.status, HttpStatusCode.OK)
+        assertEquals(HttpStatusCode.OK, response.status)
     }
-
 }
