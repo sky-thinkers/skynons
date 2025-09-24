@@ -29,6 +29,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Build backend
+      working-directory: backend
       run: cmake -DCMAKE_BUILD_TYPE=Release -Bbuild && cmake --build build -j8
 
     # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
