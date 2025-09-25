@@ -11,11 +11,14 @@ interface SkynonsClientApi {
 }
 
 data class SimpleSimulationResult(
-    val cvnd: SvgData,
+    val cwnd: SvgData,
     val packetReordering: SvgData,
     val rate: SvgData,
     val rtt: SvgData,
-)
+) {
+    @Deprecated("Use val cwnd instead", replaceWith = ReplaceWith("cwnd"))
+    val cvnd: SvgData get() = cwnd
+}
 
 sealed interface ApiResult<out T> {
     data class Success<out T>(val result: T) : ApiResult<T>

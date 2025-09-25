@@ -17,13 +17,13 @@ RUN --mount=type=cache,target=/home/builder/.gradle,uid=1001 ./gradlew :server:i
 
 FROM eclipse-temurin:11 AS server
 RUN apt update && apt install gnuplot graphviz python3-graphviz gcc g++ -y
-WORKDIR /server
-COPY --from=builder /home/builder/repo/server/build/install/server .
-COPY --from=backend-builder /home/builder/repo/build/nons bin/nons
+COPY --from=builder /home/builder/repo/server/build/install/server /server
+COPY --from=backend-builder /home/builder/repo/build/nons /server/bin/nons
 ENV NONS_PATH=/server/bin/nons
 RUN useradd -s /bin/bash server
 USER server
-CMD ["./bin/server"]
+WORKDIR /tmp/server
+CMD ["/server/bin/server"]
 
 FROM nginxinc/nginx-unprivileged:1.29.1-alpine3.22-perl AS client
 RUN rm /etc/nginx/conf.d/default.conf
