@@ -12,7 +12,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.contentType
-import kotlinx.io.readString
+import io.ktor.utils.io.readBuffer
+import io.ktor.utils.io.readText
 
 class SkynonsClientApiImpl(
     private val apiAddress: String = LOCAL_API_ADDRESS,
@@ -25,31 +26,34 @@ class SkynonsClientApiImpl(
             contentType(ContentType.Application.Yaml)
         }
 
+        suspend fun PartData.readText(): String = when (this) {
+            is PartData.BinaryChannelItem -> this.provider().readBuffer().readText()
+            is PartData.BinaryItem -> this.provider().readText()
+            is PartData.FileItem -> this.provider().readBuffer().readText()
+            is PartData.FormItem -> this.value
+        }
+
         return when (response.status) {
             HttpStatusCode.OK -> {
-                var cvnd: SvgData? = null
+                var cwnd: SvgData? = null
                 var packetReordering: SvgData? = null
                 var rate: SvgData? = null
                 var rtt: SvgData? = null
                 val data = response.body<MultiPartData>()
                 var part = data.readPart()
                 while (part != null) {
-                    if (part !is PartData.BinaryItem) {
-                        part.dispose()
-                        return ApiResult.MalformedResponseError("Expected multipart data of file parts, but got non-file part ${part.name}")
-                    }
                     when (part.name) {
-                        "cvnd.svg" -> cvnd = SvgData(part.provider().readString())
-                        "packet_reordering.svg" -> packetReordering = SvgData(part.provider().readString())
-                        "rate.svg" -> rate = SvgData(part.provider().readString())
-                        "rtt.svg" -> rtt = SvgData(part.provider().readString())
+                        "cwnd.svg" -> cwnd = SvgData(part.readText())
+                        "packet_reordering.svg" -> packetReordering = SvgData(part.readText())
+                        "rate.svg" -> rate = SvgData(part.readText())
+                        "rtt.svg" -> rtt = SvgData(part.readText())
                     }
                     part.dispose()
                     part = data.readPart()
                 }
                 ApiResult.Success(
                     SimpleSimulationResult(
-                        cvnd ?: return ApiResult.MalformedResponseError("Missing cvnd.svg in response"),
+                        cwnd ?: return ApiResult.MalformedResponseError("Missing cwnd.svg in response"),
                         packetReordering
                             ?: return ApiResult.MalformedResponseError("Missing packet_reordering.svg in response"),
                         rate ?: return ApiResult.MalformedResponseError("Missing rate.svg in response"),
