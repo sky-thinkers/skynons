@@ -31,8 +31,6 @@ fun App() {
         val screenHeight = window.innerHeight
         val screenWidth = window.innerWidth
 
-        val localContext = LocalPlatformContext.current
-
         val scope = rememberCoroutineScope()
         var config by remember { mutableStateOf("") }
         var buttonEnabled by remember { mutableStateOf(true) }
@@ -41,13 +39,14 @@ fun App() {
         var errorMessageVisible by remember { mutableStateOf(false) }
         var errorMessage by remember { mutableStateOf("Непредвиденная ошибка") }
 
-        val imageLoader by remember {
-            mutableStateOf(
-                ImageLoader.Builder(localContext)
+        val localContext = LocalPlatformContext.current
+
+        val imageLoader = remember(localContext) {
+            ImageLoader.Builder(localContext)
                 .components {
                     add(SvgDecoder.Factory())
                 }
-                .build())
+                .build()
         }
 
         var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
