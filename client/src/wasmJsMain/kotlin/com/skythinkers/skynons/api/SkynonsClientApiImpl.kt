@@ -75,5 +75,4 @@ class SkynonsClientApiImpl(
         private const val API_PREFIX = "/api/v0"
         private const val SIMULATE_ENDPOINT = "$API_PREFIX/simulate"
     }
-
 }

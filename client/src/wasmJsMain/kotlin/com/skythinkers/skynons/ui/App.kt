@@ -31,6 +31,8 @@ fun App() {
         val screenHeight = window.innerHeight
         val screenWidth = window.innerWidth
 
+        val localContext = LocalPlatformContext.current
+
         val scope = rememberCoroutineScope()
         var config by remember { mutableStateOf("") }
         var buttonEnabled by remember { mutableStateOf(true) }
@@ -39,12 +41,19 @@ fun App() {
         var errorMessageVisible by remember { mutableStateOf(false) }
         var errorMessage by remember { mutableStateOf("Непредвиденная ошибка") }
 
+        val imageLoader by remember {
+            mutableStateOf(
+                ImageLoader.Builder(localContext)
+                .components {
+                    add(SvgDecoder.Factory())
+                }
+                .build())
+        }
+
         var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
         var cwndSvg by remember { mutableStateOf<ImageRequest?>(null) }
         var rateSvg by remember { mutableStateOf<ImageRequest?>(null) }
         var packetReorderingSvg by remember { mutableStateOf<ImageRequest?>(null) }
-
-        val localContext = LocalPlatformContext.current
 
         Row(
             modifier = Modifier
@@ -75,9 +84,13 @@ fun App() {
                             buttonText = "Simulate"
                             if (result != null) {
                                 rttSvg = ImageRequest.Builder(localContext).data(result.rtt.data.toByteArray()).build()
-                                cwndSvg = ImageRequest.Builder(localContext).data(result.cwnd.data.toByteArray()).build()
-                                rateSvg = ImageRequest.Builder(localContext).data(result.rate.data.toByteArray()).build()
-                                packetReorderingSvg = ImageRequest.Builder(localContext).data(result.packetReordering.data.toByteArray()).build()
+                                cwndSvg =
+                                    ImageRequest.Builder(localContext).data(result.cwnd.data.toByteArray()).build()
+                                rateSvg =
+                                    ImageRequest.Builder(localContext).data(result.rate.data.toByteArray()).build()
+                                packetReorderingSvg =
+                                    ImageRequest.Builder(localContext).data(result.packetReordering.data.toByteArray())
+                                        .build()
                             } else {
                                 errorMessage = response.errorOrNull()?.message ?: "Непредвиденная ошибка"
                                 errorMessageVisible = true
@@ -96,11 +109,6 @@ fun App() {
                 modifier = Modifier.safeContentPadding().width((screenWidth * 0.6).dp).padding(5.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val imageLoader = ImageLoader.Builder(LocalPlatformContext.current)
-                    .components {
-                        add(SvgDecoder.Factory())
-                    }
-                    .build()
                 if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
                     Row {
                         Column(
