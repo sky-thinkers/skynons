@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +22,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
 import com.skythinkers.skynons.api.SkynonsClientApiImpl
+import com.skythinkers.skynons.api.errorOrNull
 import com.skythinkers.skynons.api.resultOrNull
 import io.ktor.utils.io.core.*
 import kotlinx.browser.window
@@ -36,10 +39,16 @@ fun App() {
         var buttonEnabled by remember { mutableStateOf(true) }
         var buttonText by remember { mutableStateOf("Simulate") }
 
-        var rttSvg by remember { mutableStateOf<String?>(null) }
-        var cwndSvg by remember { mutableStateOf<String?>(null) }
-        var rateSvg by remember { mutableStateOf<String?>(null) }
-        var packetReorderingSvg by remember { mutableStateOf<String?>(null) }
+        var errorMessageVisible by remember { mutableStateOf(false) }
+        var errorMessage by remember { mutableStateOf("Непредвиденная ошибка") }
+
+        var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
+        var cwndSvg by remember { mutableStateOf<ImageRequest?>(null) }
+        var rateSvg by remember { mutableStateOf<ImageRequest?>(null) }
+        var packetReorderingSvg by remember { mutableStateOf<ImageRequest?>(null) }
+
+        val localContext = LocalPlatformContext.current
+
         Row(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -61,21 +70,29 @@ fun App() {
                         buttonEnabled = false
                         buttonText = "Simulating..."
                         scope.launch {
+                            errorMessageVisible = false
                             val api = SkynonsClientApiImpl()
-                            val result = api.simulate(config).resultOrNull()
+                            val response = api.simulate(config)
+                            val result = response.resultOrNull()
                             buttonEnabled = true
                             buttonText = "Simulate"
                             if (result != null) {
-                                rttSvg = result.rtt.data
-                                cwndSvg = result.cwnd.data
-                                rateSvg = result.rate.data
-                                packetReorderingSvg = result.packetReordering.data
+                                rttSvg = ImageRequest.Builder(localContext).data(result.rtt.data.toByteArray()).build()
+                                cwndSvg = ImageRequest.Builder(localContext).data(result.cwnd.data.toByteArray()).build()
+                                rateSvg = ImageRequest.Builder(localContext).data(result.rate.data.toByteArray()).build()
+                                packetReorderingSvg = ImageRequest.Builder(localContext).data(result.packetReordering.data.toByteArray()).build()
+                            } else {
+                                errorMessage = response.errorOrNull()?.message ?: "Непредвиденная ошибка"
+                                errorMessageVisible = true
                             }
                         }
                     },
                     enabled = buttonEnabled
                 ) {
                     Text(buttonText)
+                }
+                AnimatedVisibility(errorMessageVisible) {
+                    Text(errorMessage, modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5)))
                 }
             }
             Column(
@@ -94,11 +111,10 @@ fun App() {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(rttSvg!!.toByteArray())
-                                    .build(), imageLoader = imageLoader,
+                                model = rttSvg,
+                                imageLoader = imageLoader,
                                 contentDescription = "rtt graph",
-                                modifier = Modifier.background(Color.White)
+                                modifier = Modifier.background(Color.White, RoundedCornerShape(7))
                             )
                             Text("RTT graph")
                         }
@@ -107,11 +123,10 @@ fun App() {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(cwndSvg!!.toByteArray())
-                                    .build(), imageLoader = imageLoader,
+                                model = cwndSvg,
+                                imageLoader = imageLoader,
                                 contentDescription = "cwnd graph",
-                                modifier = Modifier.background(Color.White)
+                                modifier = Modifier.background(Color.White, RoundedCornerShape(7))
                             )
                             Text("CWND graph")
                         }
@@ -122,11 +137,10 @@ fun App() {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(rateSvg!!.toByteArray())
-                                    .build(), imageLoader = imageLoader,
+                                model = rateSvg,
+                                imageLoader = imageLoader,
                                 contentDescription = "Rate graph",
-                                modifier = Modifier.background(Color.White)
+                                modifier = Modifier.background(Color.White, RoundedCornerShape(7))
                             )
                             Text("Rate graph")
                         }
@@ -135,11 +149,10 @@ fun App() {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(packetReorderingSvg!!.toByteArray())
-                                    .build(), imageLoader = imageLoader,
+                                model = packetReorderingSvg,
+                                imageLoader = imageLoader,
                                 contentDescription = "Packet reordering graph",
-                                modifier = Modifier.background(Color.White)
+                                modifier = Modifier.background(Color.White, RoundedCornerShape(7))
                             )
                             Text("Packet reordering graph")
                         }
