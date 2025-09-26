@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -21,11 +22,15 @@ import coil3.svg.SvgDecoder
 import com.skythinkers.skynons.api.SkynonsClientApiImpl
 import com.skythinkers.skynons.api.resultOrNull
 import io.ktor.utils.io.core.*
+import kotlinx.browser.window
 import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
     MaterialTheme {
+        val screenHeight = window.innerHeight
+        val screenWidth = window.innerWidth
+
         val scope = rememberCoroutineScope()
         var config by remember { mutableStateOf("") }
         var buttonEnabled by remember { mutableStateOf(true) }
@@ -42,14 +47,14 @@ fun App() {
                 .fillMaxSize()
         ) {
             Column(
-                modifier = Modifier.safeContentPadding().padding(30.dp),
+                modifier = Modifier.safeContentPadding().width((screenWidth * 0.4).dp).padding(5.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 TextField(
                     value = config,
                     onValueChange = { newText -> config = newText },
                     label = { Text("Enter simulation config") },
-                    modifier = Modifier.width(750.dp).height(500.dp)
+                    modifier = Modifier.width(750.dp).height((screenHeight * 0.75).dp)
                 )
                 Button(
                     onClick = {
@@ -74,8 +79,8 @@ fun App() {
                 }
             }
             Column(
-                modifier = Modifier.safeContentPadding().padding(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.safeContentPadding().width((screenWidth * 0.6).dp).padding(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val imageLoader = ImageLoader.Builder(LocalPlatformContext.current)
                     .components {
@@ -84,36 +89,60 @@ fun App() {
                     .build()
                 if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
                     Row {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalPlatformContext.current)
-                                .data(rttSvg!!.toByteArray())
-                                .build(), imageLoader = imageLoader,
-                            contentDescription = "rtt graph",
-                            modifier = Modifier.size(300.dp).padding(30.dp)
-                        )
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalPlatformContext.current)
-                                .data(cwndSvg!!.toByteArray())
-                                .build(), imageLoader = imageLoader,
-                            contentDescription = "cwnd graph",
-                            modifier = Modifier.size(300.dp).padding(30.dp)
-                        )
+                        Column(
+                            modifier = Modifier.width((screenWidth * 0.2).dp).padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalPlatformContext.current)
+                                    .data(rttSvg!!.toByteArray())
+                                    .build(), imageLoader = imageLoader,
+                                contentDescription = "rtt graph",
+                                modifier = Modifier.background(Color.White)
+                            )
+                            Text("RTT graph")
+                        }
+                        Column(
+                            modifier = Modifier.width((screenWidth * 0.2).dp).padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalPlatformContext.current)
+                                    .data(cwndSvg!!.toByteArray())
+                                    .build(), imageLoader = imageLoader,
+                                contentDescription = "cwnd graph",
+                                modifier = Modifier.background(Color.White)
+                            )
+                            Text("CWND graph")
+                        }
                     }
                     Row {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalPlatformContext.current)
-                                .data(rateSvg!!.toByteArray())
-                                .build(), imageLoader = imageLoader,
-                            contentDescription = "Rate graph",
-                            modifier = Modifier.size(300.dp).padding(30.dp)
-                        )
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalPlatformContext.current)
-                                .data(packetReorderingSvg!!.toByteArray())
-                                .build(), imageLoader = imageLoader,
-                            contentDescription = "Packet reordering graph",
-                            modifier = Modifier.size(300.dp).padding(30.dp)
-                        )
+                        Column(
+                            modifier = Modifier.width((screenWidth * 0.2).dp).padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalPlatformContext.current)
+                                    .data(rateSvg!!.toByteArray())
+                                    .build(), imageLoader = imageLoader,
+                                contentDescription = "Rate graph",
+                                modifier = Modifier.background(Color.White)
+                            )
+                            Text("Rate graph")
+                        }
+                        Column(
+                            modifier = Modifier.width((screenWidth * 0.2).dp).padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalPlatformContext.current)
+                                    .data(packetReorderingSvg!!.toByteArray())
+                                    .build(), imageLoader = imageLoader,
+                                contentDescription = "Packet reordering graph",
+                                modifier = Modifier.background(Color.White)
+                            )
+                            Text("Packet reordering graph")
+                        }
                     }
                 }
             }
