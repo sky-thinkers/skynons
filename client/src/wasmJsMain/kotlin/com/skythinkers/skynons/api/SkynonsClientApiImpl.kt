@@ -1,6 +1,5 @@
 package com.skythinkers.skynons.api
 
-import com.skythinkers.skynons.data.SvgData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.Js
@@ -43,10 +42,10 @@ class SkynonsClientApiImpl(
                 var part = data.readPart()
                 while (part != null) {
                     when (part.name) {
-                        "cwnd.svg" -> cwnd = SvgData(part.readText())
-                        "packet_reordering.svg" -> packetReordering = SvgData(part.readText())
-                        "rate.svg" -> rate = SvgData(part.readText())
-                        "rtt.svg" -> rtt = SvgData(part.readText())
+                        "cwnd.svg" -> cwnd = (part.readText())
+                        "packet_reordering.svg" -> packetReordering = (part.readText())
+                        "rate.svg" -> rate = (part.readText())
+                        "rtt.svg" -> rtt = (part.readText())
                     }
                     part.dispose()
                     part = data.readPart()
@@ -70,9 +69,39 @@ class SkynonsClientApiImpl(
         }
     }
 
+    override suspend fun createSimulation(): ApiResult<SimulationId> =
+        ApiResult.ClientError("Not implemented")
+
+    override suspend fun addHost(
+        simulationId: SimulationId,
+        name: ObjectId,
+    ): ApiResult<Unit> = ApiResult.ClientError("Not implemented")
+
+
+    override suspend fun addSwitch(
+        simulationId: SimulationId,
+        name: ObjectId,
+    ): ApiResult<Unit> = ApiResult.ClientError("Not implemented")
+
+    override suspend fun addLink(
+        fromId: ObjectId,
+        toId: ObjectId,
+        speed: SpeedString,
+    ): ApiResult<Unit> = ApiResult.ClientError("Not implemented")
+
+    override suspend fun addConnection(
+        senderId: ObjectId,
+        receiverId: ObjectId,
+        sizeToSend: SizeString,
+    ): ApiResult<Unit> = ApiResult.ClientError("Not implemented")
+
+    override suspend fun simulate(): ApiResult<SimpleSimulationResult> =
+        ApiResult.ClientError("Not implemented")
+
     companion object {
         private const val LOCAL_API_ADDRESS = "http://localhost:8090"
-        private const val API_PREFIX = "/api/v0"
-        private const val SIMULATE_ENDPOINT = "$API_PREFIX/simulate"
+        private const val API_V0_PREFIX = "/api/v0"
+        private const val API_V1_PREFIX = "/api/v1"
+        private const val SIMULATE_ENDPOINT = "$API_V0_PREFIX/simulate"
     }
 }

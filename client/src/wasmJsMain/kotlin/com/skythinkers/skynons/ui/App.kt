@@ -82,13 +82,13 @@ fun App() {
                             buttonEnabled = true
                             buttonText = "Simulate"
                             if (result != null) {
-                                rttSvg = ImageRequest.Builder(localContext).data(result.rtt.data.toByteArray()).build()
+                                rttSvg = ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
                                 cwndSvg =
-                                    ImageRequest.Builder(localContext).data(result.cwnd.data.toByteArray()).build()
+                                    ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
                                 rateSvg =
-                                    ImageRequest.Builder(localContext).data(result.rate.data.toByteArray()).build()
+                                    ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
                                 packetReorderingSvg =
-                                    ImageRequest.Builder(localContext).data(result.packetReordering.data.toByteArray())
+                                    ImageRequest.Builder(localContext).data(result.packetReordering.toByteArray())
                                         .build()
                             } else {
                                 errorMessage = response.errorOrNull()?.message ?: "Непредвиденная ошибка"
