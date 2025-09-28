@@ -77,7 +77,7 @@ fun App() {
                         scope.launch {
                             errorMessageVisible = false
                             val api = SkynonsClientApiImpl()
-                            val response = api.simulate(config)
+                            val response = api.simulateConfig(config)
                             val result = response.resultOrNull()
                             buttonEnabled = true
                             buttonText = "Simulate"

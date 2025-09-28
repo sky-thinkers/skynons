@@ -22,6 +22,11 @@ typealias SpeedString = String
 typealias SizeString = String
 
 @Serializable
+data class CreateSimulationResponseData(
+    val id: SimulationId,
+)
+
+@Serializable
 data class AddHostRequestData(
     val name: ObjectId,
 )

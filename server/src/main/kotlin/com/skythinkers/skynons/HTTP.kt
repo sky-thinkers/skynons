@@ -2,8 +2,10 @@ package com.skythinkers.skynons
 
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 
 fun Application.configureHTTP() {
@@ -15,5 +17,9 @@ fun Application.configureHTTP() {
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
         anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
+    }
+
+    install(ContentNegotiation) {
+        json()
     }
 }

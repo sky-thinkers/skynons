@@ -7,16 +7,29 @@ import kotlin.contracts.contract
 
 interface SkynonsClientApi {
     // v0
-    suspend fun simulate(config: String): ApiResult<SimpleSimulationResult>
+    suspend fun simulateConfig(config: String): ApiResult<SimpleSimulationResult>
 
     // v1
     suspend fun createSimulation(): ApiResult<SimulationId>
     suspend fun addHost(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
     suspend fun addSwitch(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
-    suspend fun addLink(fromId: ObjectId, toId: ObjectId, speed: SpeedString): ApiResult<Unit>
-    suspend fun addConnection(senderId: ObjectId, receiverId: ObjectId, sizeToSend: SizeString): ApiResult<Unit>
+    suspend fun addLink(
+        simulationId: SimulationId,
+        name: ObjectId,
+        fromId: ObjectId,
+        toId: ObjectId,
+        speed: SpeedString,
+    ): ApiResult<Unit>
 
-    suspend fun simulate(): ApiResult<SimpleSimulationResult>
+    suspend fun addConnection(
+        simulationId: SimulationId,
+        name: ObjectId,
+        senderId: ObjectId,
+        receiverId: ObjectId,
+        sizeToSend: SizeString,
+    ): ApiResult<Unit>
+
+    suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult>
 }
 
 sealed interface ApiResult<out T> {
