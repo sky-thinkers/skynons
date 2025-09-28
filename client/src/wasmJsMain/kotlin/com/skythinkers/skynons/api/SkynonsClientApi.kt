@@ -2,22 +2,21 @@
 
 package com.skythinkers.skynons.api
 
-import com.skythinkers.skynons.data.SvgData
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 interface SkynonsClientApi {
+    // v0
     suspend fun simulate(config: String): ApiResult<SimpleSimulationResult>
-}
 
-data class SimpleSimulationResult(
-    val cwnd: SvgData,
-    val packetReordering: SvgData,
-    val rate: SvgData,
-    val rtt: SvgData,
-) {
-    @Deprecated("Use val cwnd instead", replaceWith = ReplaceWith("cwnd"))
-    val cvnd: SvgData get() = cwnd
+    // v1
+    suspend fun createSimulation(): ApiResult<SimulationId>
+    suspend fun addHost(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
+    suspend fun addSwitch(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
+    suspend fun addLink(fromId: ObjectId, toId: ObjectId, speed: SpeedString): ApiResult<Unit>
+    suspend fun addConnection(senderId: ObjectId, receiverId: ObjectId, sizeToSend: SizeString): ApiResult<Unit>
+
+    suspend fun simulate(): ApiResult<SimpleSimulationResult>
 }
 
 sealed interface ApiResult<out T> {
