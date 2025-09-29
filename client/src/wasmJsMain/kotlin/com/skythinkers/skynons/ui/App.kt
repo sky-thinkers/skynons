@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -74,21 +75,23 @@ fun App() {
                     onClick = {
                         buttonEnabled = false
                         buttonText = "Simulating..."
+                        errorMessageVisible = false
+                        val api = SkynonsClientApiImpl()
                         scope.launch {
-                            errorMessageVisible = false
-                            val api = SkynonsClientApiImpl()
                             val response = api.simulateConfig(config)
                             val result = response.resultOrNull()
                             buttonEnabled = true
                             buttonText = "Simulate"
                             if (result != null) {
-                                rttSvg = ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
+                                rttSvg =
+                                    ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
                                 cwndSvg =
                                     ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
                                 rateSvg =
                                     ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
                                 packetReorderingSvg =
-                                    ImageRequest.Builder(localContext).data(result.packetReordering.toByteArray())
+                                    ImageRequest.Builder(localContext)
+                                        .data(result.packetReordering.toByteArray())
                                         .build()
                             } else {
                                 errorMessage = response.errorOrNull()?.message ?: "Непредвиденная ошибка"
@@ -101,7 +104,9 @@ fun App() {
                     Text(buttonText)
                 }
                 AnimatedVisibility(errorMessageVisible) {
-                    Text(errorMessage, modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5)))
+                    SelectionContainer {
+                        Text(errorMessage, modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5)))
+                    }
                 }
             }
             Column(
