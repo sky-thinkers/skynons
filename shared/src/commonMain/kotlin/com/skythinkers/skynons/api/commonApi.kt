@@ -39,7 +39,7 @@ data class AddSwitchRequestData(
 @Serializable
 data class AddLinkRequestData(
     val name: ObjectId,
-    @SerialName("form_id")
+    @SerialName("from_id")
     val fromId: ObjectId,
     @SerialName("to_id")
     val toId: ObjectId,
