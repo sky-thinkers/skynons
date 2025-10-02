@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 typealias Port = Int
 
 class NonsProcessManager(val nonsPath: String) : AutoCloseable {
-    private val portToNonsProcess = ConcurrentHashMap<Int, Process>()
+    private val portToNonsProcess = ConcurrentHashMap<Port, Process>()
 
     fun createSimulation(): Port? {
         val port = findFreePort()
@@ -19,6 +19,10 @@ class NonsProcessManager(val nonsPath: String) : AutoCloseable {
 
         portToNonsProcess[port] = process
         return port
+    }
+
+    fun checkPort(port : Port): Boolean {
+        return portToNonsProcess.containsKey(port);
     }
 
     private fun findFreePort(): Port? {
