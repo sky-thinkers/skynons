@@ -7,4 +7,8 @@ fun Route.apiV1(nonsPath: String) {
     val processManager = NonsProcessManager(nonsPath)
     createSimulation(processManager)
     addHost(processManager)
+    addSwitch(processManager)
+    addLink(processManager)
+    addConnection(processManager)
+    simulate(processManager)
 }
