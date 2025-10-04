@@ -5,5 +5,5 @@ import com.skythinkers.skynons.routing.NonsProcessManager
 import io.ktor.server.routing.Route
 
 fun Route.simulate(processManager: NonsProcessManager) {
-    RedirectRequest<Unit, AddConnectionRequestData>(processManager, "simulate")
+    redirectRequest<Unit, AddConnectionRequestData>(processManager, "simulate")
 }

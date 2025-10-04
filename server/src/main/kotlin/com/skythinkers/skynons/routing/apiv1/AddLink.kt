@@ -5,5 +5,5 @@ import com.skythinkers.skynons.routing.NonsProcessManager
 import io.ktor.server.routing.Route
 
 fun Route.addLink(processManager: NonsProcessManager) {
-    RedirectRequest<AddLinkRequestData, Unit>(processManager, "add_link")
+    redirectRequest<AddLinkRequestData, Unit>(processManager, "add_link")
 }

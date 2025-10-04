@@ -5,5 +5,5 @@ import com.skythinkers.skynons.routing.NonsProcessManager
 import io.ktor.server.routing.Route
 
 fun Route.addSwitch(processManager: NonsProcessManager) {
-    RedirectRequest<AddSwitchRequestData, Unit>(processManager, "add_switch")
+    redirectRequest<AddSwitchRequestData, Unit>(processManager, "add_switch")
 }

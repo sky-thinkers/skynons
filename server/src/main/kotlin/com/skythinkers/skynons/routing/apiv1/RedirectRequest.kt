@@ -22,7 +22,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import io.ktor.util.logging.KtorSimpleLogger
 
-inline fun <reified RequestBodyType : Any, reified ResponseBodyType : Any> Route.RedirectRequest(
+inline fun <reified RequestBodyType : Any, reified ResponseBodyType : Any> Route.redirectRequest(
         processManager: NonsProcessManager,
         methodName: String
 ) {

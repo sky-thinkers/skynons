@@ -5,5 +5,5 @@ import com.skythinkers.skynons.routing.NonsProcessManager
 import io.ktor.server.routing.Route
 
 fun Route.addHost(processManager: NonsProcessManager) {
-    RedirectRequest<AddHostRequestData, Unit>(processManager, "add_host")
+    redirectRequest<AddHostRequestData, Unit>(processManager, "add_host")
 }
