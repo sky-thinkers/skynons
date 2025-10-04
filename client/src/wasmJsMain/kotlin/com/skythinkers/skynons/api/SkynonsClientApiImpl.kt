@@ -134,7 +134,7 @@ class SkynonsClientApiImpl(
         sizeToSend: SizeString,
     ): ApiResult<Unit>  {
         val response = httpClient.post(apiAddress + addConnectionEndpoint(simulationId)) {
-            setBody(AddLinkRequestData(
+            setBody(AddConnectionRequestData(
                 name,
                 senderId,
                 receiverId,

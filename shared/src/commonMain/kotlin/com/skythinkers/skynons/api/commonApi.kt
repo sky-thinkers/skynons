@@ -9,6 +9,8 @@ typealias ObjectId = String
 
 typealias SvgData = String
 
+@Serializable data class ErrorResponseData(val err: String)
+
 @Serializable
 data class SimpleSimulationResult(
     val cwnd: SvgData,
@@ -39,20 +41,15 @@ data class AddSwitchRequestData(
 @Serializable
 data class AddLinkRequestData(
     val name: ObjectId,
-    @SerialName("from_id")
-    val fromId: ObjectId,
-    @SerialName("to_id")
-    val toId: ObjectId,
+    @SerialName("from_id") val fromId: ObjectId,
+    @SerialName("to_id") val toId: ObjectId,
     val speed: SpeedString,
 )
 
 @Serializable
 data class AddConnectionRequestData(
     val name: ObjectId,
-    @SerialName("sender_id")
-    val senderId: ObjectId,
-    @SerialName("receiver_id")
-    val receiverId: SpeedString,
-    @SerialName("data_to_send")
-    val sizeToSend: SizeString,
+    @SerialName("sender_id") val senderId: ObjectId,
+    @SerialName("receiver_id") val receiverId: SpeedString,
+    @SerialName("data_to_send") val sizeToSend: SizeString,
 )
