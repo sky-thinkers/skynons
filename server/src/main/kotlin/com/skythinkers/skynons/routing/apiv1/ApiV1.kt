@@ -1,0 +1,10 @@
+package com.skythinkers.skynons.routing.apiv1
+
+import com.skythinkers.skynons.routing.NonsProcessManager
+import io.ktor.server.routing.Route
+
+fun Route.apiV1(nonsPath: String) {
+    val processManager = NonsProcessManager(nonsPath)
+    createSimulation(processManager)
+    addHost(processManager)
+}

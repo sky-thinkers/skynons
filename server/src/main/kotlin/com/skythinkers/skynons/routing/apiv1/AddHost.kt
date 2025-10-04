@@ -1,25 +1,30 @@
-package com.skythinkers.skynons
+package com.skythinkers.skynons.routing.apiv1
 
-import com.skythinkers.skynons.api.*
-import io.ktor.client.*
-import io.ktor.client.engine.jetty.jakarta.*
+import com.skythinkers.skynons.api.AddHostRequestData
+import com.skythinkers.skynons.api.ErrorResponseData
+import com.skythinkers.skynons.routing.NonsProcessManager
+import com.skythinkers.skynons.routing.Port
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
-import io.ktor.http.*
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.post
 import io.ktor.util.logging.KtorSimpleLogger
-import kotlinx.serialization.Serializable
 
-@Serializable data class AddHostRequest(val name: String)
 
-fun Route.AddHost(processManager: NonsProcessManager) {
+fun Route.addHost(processManager: NonsProcessManager) {
     val logger = KtorSimpleLogger("V1 API")
-    val client = HttpClient(Jetty) { install(ContentNegotiation) { json() } }
+    val client = HttpClient(OkHttp) { install(ContentNegotiation) { json() } }
     post("/{id}/add_host") {
         val port: Port =
                 call.parameters["id"]?.toInt()
@@ -28,12 +33,12 @@ fun Route.AddHost(processManager: NonsProcessManager) {
                             return@post
                         }
 
-        val body: AddHostRequest =
+        val body =
                 try {
-                    call.receive<AddHostRequest>()
+                    call.receive<AddHostRequestData>()
                 } catch (e: Exception) {
                     logger.warn("Failed to parse JSON body: ${e.message}")
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("invalid json"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponseData("invalid json"))
                     return@post
                 }
 
@@ -54,12 +59,12 @@ fun Route.AddHost(processManager: NonsProcessManager) {
                         contentType(ContentType.Application.Json)
                         setBody(body)
                     }
-            call.respond(response)
+            call.respond(status = response.status, message = response.body<Map<String, String>>())
         } catch (e: Exception) {
-            logger.error("Error forwarding to $targetUrl: ${e.message}")
+            logger.error("Error forwarding to $targetUrl: ${e.stackTraceToString()}")
             call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse("Cannot reach local simulation server")
+                ErrorResponseData("Cannot reach local simulation server")
             )
         }
     }

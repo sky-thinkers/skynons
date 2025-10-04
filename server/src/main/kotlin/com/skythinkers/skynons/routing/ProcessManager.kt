@@ -1,4 +1,4 @@
-package com.skythinkers.skynons
+package com.skythinkers.skynons.routing
 
 import java.io.IOException
 import java.net.ServerSocket
@@ -22,7 +22,7 @@ class NonsProcessManager(val nonsPath: String) : AutoCloseable {
     }
 
     fun checkPort(port : Port): Boolean {
-        return portToNonsProcess.containsKey(port);
+        return portToNonsProcess.containsKey(port)
     }
 
     private fun findFreePort(): Port? {

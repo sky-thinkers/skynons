@@ -1,16 +1,26 @@
-package com.skythinkers.skynons
+package com.skythinkers.skynons.routing
 
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.request.receiveText
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.post
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import kotlin.io.path.*
+import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.appendText
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.createTempFile
+import kotlin.io.path.pathString
+import kotlin.io.path.readBytes
+import kotlin.io.path.writeText
 
-fun Route.ApiV0(nonsPath: String) {
+fun Route.apiV0(nonsPath: String) {
     post("/simulate") {
         try {
             val text = call.receiveText()

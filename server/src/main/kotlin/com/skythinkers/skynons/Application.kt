@@ -1,5 +1,6 @@
 package com.skythinkers.skynons
 
+import com.skythinkers.skynons.routing.configureRouting
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {

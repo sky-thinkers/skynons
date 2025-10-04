@@ -1,20 +1,17 @@
-package com.skythinkers.skynons
+package com.skythinkers.skynons.routing
 
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import kotlin.io.path.*
+import com.skythinkers.skynons.routing.apiv1.apiV1
+import io.ktor.server.application.Application
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
 
 fun Application.configureRouting() {
     val nonsPath =
             System.getenv("NONS_PATH")?.takeUnless(String::isEmpty) ?: "../backend/build/nons"
     routing {
         route("api") {
-            route("v0") { ApiV0(nonsPath) }
-            route("v1") { ApiV1(nonsPath) }
+            route("v0") { apiV0(nonsPath) }
+            route("v1") { apiV1(nonsPath) }
         }
     }
 }

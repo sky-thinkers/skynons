@@ -10,6 +10,9 @@ typealias ObjectId = String
 typealias SvgData = String
 
 @Serializable
+data class ErrorResponseData(val err: String)
+
+@Serializable
 data class SimpleSimulationResult(
     val cwnd: SvgData,
     val packetReordering: SvgData,
