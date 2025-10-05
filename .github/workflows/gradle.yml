@@ -17,14 +17,11 @@ jobs:
       with:
         submodules: recursive
 
-#    TODO(firelion9): research why it is not working
-#    - name: Install backend build dependencies
-#      uses: tecolicom/actions-use-apt-tools@42cd54f69285d0cb1e013b095e517d05ed6ec34f # v1.6.0
-#      with:
-#        tools: gnuplot graphviz python3-graphviz
-
     - name: Install backend build dependencies
-      run: sudo apt update && sudo apt install gnuplot graphviz python3-graphviz
+      uses: tecolicom/actions-use-apt-tools@42cd54f69285d0cb1e013b095e517d05ed6ec34f # v1.6.0
+      with:
+        tools: gnuplot graphviz python3-graphviz
+        method: package
 
     - name: Set up JDK 17
       uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
