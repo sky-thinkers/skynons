@@ -85,6 +85,7 @@ class SkynonsClientApiImpl(
     ): ApiResult<Unit> {
         val response = httpClient.post(apiAddress + addHostEndpoint(simulationId)) {
             setBody(AddHostRequestData(name))
+            contentType(ContentType.Application.Json)
         }
 
         return handleResponseDefault(response) {
@@ -99,6 +100,7 @@ class SkynonsClientApiImpl(
     ): ApiResult<Unit>  {
         val response = httpClient.post(apiAddress + addSwitchEndpoint(simulationId)) {
             setBody(AddSwitchRequestData(name))
+            contentType(ContentType.Application.Json)
         }
 
         return handleResponseDefault(response) {
@@ -119,6 +121,7 @@ class SkynonsClientApiImpl(
                 toId,
                 speed,
             ))
+            contentType(ContentType.Application.Json)
         }
 
         return handleResponseDefault(response) {
@@ -140,6 +143,7 @@ class SkynonsClientApiImpl(
                 receiverId,
                 sizeToSend,
             ))
+            contentType(ContentType.Application.Json)
         }
 
         return handleResponseDefault(response) {
