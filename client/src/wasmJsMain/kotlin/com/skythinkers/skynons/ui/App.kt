@@ -25,121 +25,6 @@ import kotlinx.browser.window
 import kotlinx.coroutines.*
 
 @Composable
-fun SingleInputDialog(
-    onDismissRequest: () -> Unit,
-    onConfirm: (String) -> Unit,
-    title: String,
-    label: String,
-    initialInput: String = "",
-) {
-    var textInput by remember { mutableStateOf(initialInput) }
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text(title) },
-        text = {
-            TextField(
-                value = textInput,
-                onValueChange = { textInput = it },
-                label = { Text(label) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(textInput)
-                    onDismissRequest()
-                }
-            ) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismissRequest
-            ) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-fun FourInputsDialog(
-    onDismissRequest: () -> Unit,
-    onConfirm: (String, String, String, String) -> Unit,
-    title: String,
-    label1: String,
-    label2: String,
-    label3: String,
-    label4: String,
-    initialInput: String = "",
-) {
-    var input1 by remember { mutableStateOf(initialInput) }
-    var input2 by remember { mutableStateOf(initialInput) }
-    var input3 by remember { mutableStateOf(initialInput) }
-    var input4 by remember { mutableStateOf(initialInput) }
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text(title) },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TextField(
-                    value = input1,
-                    onValueChange = { input1 = it },
-                    label = { Text(label1) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(2.dp)
-                )
-                TextField(
-                    value = input2,
-                    onValueChange = { input2 = it },
-                    label = { Text(label2) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(2.dp)
-                )
-                TextField(
-                    value = input3,
-                    onValueChange = { input3 = it },
-                    label = { Text(label3) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(2.dp)
-                )
-                TextField(
-                    value = input4,
-                    onValueChange = { input4 = it },
-                    label = { Text(label4) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(2.dp)
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(input1, input2, input3, input4)
-                    onDismissRequest()
-                }
-            ) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismissRequest
-            ) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
 fun App() {
     MaterialTheme {
 
@@ -165,10 +50,14 @@ fun App() {
             }
         }
 
-        if (simulationId == null) {
-            Text("Подключение к серверу... $connectionError")
-        } else {
-            GraphRedactor(localContext, scope, api, simulationId!!)
+        Column(
+            modifier = Modifier.safeContentPadding()
+        ) {
+            if (simulationId == null) {
+                Text("Подключение к серверу... $connectionError")
+            } else {
+                GraphRedactor(localContext, scope, api, simulationId!!)
+            }
         }
     }
 }
@@ -215,11 +104,10 @@ fun GraphRedactor(
     Row(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.primaryContainer)
-            .safeContentPadding()
             .fillMaxSize()
     ) {
         Column(
-            modifier = Modifier.safeContentPadding().width((screenWidth * 0.4).dp).padding(5.dp),
+            modifier = Modifier.width((screenWidth * 0.4).dp).padding(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Колонки объектов
@@ -382,7 +270,7 @@ fun GraphRedactor(
 
         // Графы
         Column(
-            modifier = Modifier.safeContentPadding().width((screenWidth * 0.6).dp).padding(5.dp),
+            modifier = Modifier.width((screenWidth * 0.6).dp).padding(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {

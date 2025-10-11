@@ -2,13 +2,12 @@ package com.skythinkers.skynons.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -172,4 +171,119 @@ fun ObjectsList(objects: MutableList<String>, buttonText: String, onAddElement: 
             Text(buttonText)
         }
     }
+}
+
+@Composable
+fun SingleInputDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: (String) -> Unit,
+    title: String,
+    label: String,
+    initialInput: String = "",
+) {
+    var textInput by remember { mutableStateOf(initialInput) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(title) },
+        text = {
+            TextField(
+                value = textInput,
+                onValueChange = { textInput = it },
+                label = { Text(label) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(textInput)
+                    onDismissRequest()
+                }
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun FourInputsDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: (String, String, String, String) -> Unit,
+    title: String,
+    label1: String,
+    label2: String,
+    label3: String,
+    label4: String,
+    initialInput: String = "",
+) {
+    var input1 by remember { mutableStateOf(initialInput) }
+    var input2 by remember { mutableStateOf(initialInput) }
+    var input3 by remember { mutableStateOf(initialInput) }
+    var input4 by remember { mutableStateOf(initialInput) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextField(
+                    value = input1,
+                    onValueChange = { input1 = it },
+                    label = { Text(label1) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(2.dp)
+                )
+                TextField(
+                    value = input2,
+                    onValueChange = { input2 = it },
+                    label = { Text(label2) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(2.dp)
+                )
+                TextField(
+                    value = input3,
+                    onValueChange = { input3 = it },
+                    label = { Text(label3) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(2.dp)
+                )
+                TextField(
+                    value = input4,
+                    onValueChange = { input4 = it },
+                    label = { Text(label4) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(2.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(input1, input2, input3, input4)
+                    onDismissRequest()
+                }
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
