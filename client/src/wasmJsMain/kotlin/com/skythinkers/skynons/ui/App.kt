@@ -153,7 +153,7 @@ fun App() {
 
         var connectionError by remember { mutableStateOf<String?>(null) }
 
-        LaunchedEffect(true) {
+        LaunchedEffect(api) {
             val resp = api.createSimulation()
             val result = resp.resultOrNull()
             if (result == null) {
@@ -227,17 +227,17 @@ fun App() {
             val linksList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
             val connectionsList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
 
-            fun tryAddHost(hostname: ObjectId) {
+            fun tryAddHost(hostName: ObjectId) {
                 errorMessageVisible = false
                 scope.launch(Dispatchers.Default) {
                     try {
-                        val result = api.addHost(simulationId!!, hostname)
+                        val result = api.addHost(simulationId!!, hostName)
                         val error = result.errorOrNull()
                         if (error != null) {
                             errorMessage = "Could not add host: ${error.message}"
                             errorMessageVisible = true
                         } else {
-                            hostsList += hostname
+                            hostsList += hostName
                         }
                     } catch (e: Exception) {
                         errorMessage = "Unexpected error: ${e.message}"
@@ -246,17 +246,17 @@ fun App() {
                 }
             }
 
-            fun tryAddSwitch(switchname: ObjectId) {
+            fun tryAddSwitch(switchName: ObjectId) {
                 errorMessageVisible = false
                 scope.launch(Dispatchers.Default) {
                     try {
-                        val result = api.addSwitch(simulationId!!, switchname)
+                        val result = api.addSwitch(simulationId!!, switchName)
                         val error = result.errorOrNull()
                         if (error != null) {
                             errorMessage = "Could not add switch: ${error.message}"
                             errorMessageVisible = true
                         } else {
-                            switchesList += switchname
+                            switchesList += switchName
                         }
                     } catch (e: Exception) {
                         errorMessage = "Unexpected error: ${e.message}"
@@ -265,17 +265,17 @@ fun App() {
                 }
             }
 
-            fun tryAddLink(linkname: ObjectId, from: ObjectId, to: ObjectId, speed: SpeedString) {
+            fun tryAddLink(linkName: ObjectId, from: ObjectId, to: ObjectId, speed: SpeedString) {
                 errorMessageVisible = false
                 scope.launch(Dispatchers.Default) {
                     try {
-                        val result = api.addLink(simulationId!!, linkname, from, to, speed)
+                        val result = api.addLink(simulationId!!, linkName, from, to, speed)
                         val error = result.errorOrNull()
                         if (error != null) {
                             errorMessage = "Could not add link: ${error.message}"
                             errorMessageVisible = true
                         } else {
-                            linksList += "$linkname ($from -> $to, $speed)"
+                            linksList += "$linkName ($from -> $to, $speed)"
                         }
                     } catch (e: Exception) {
                         errorMessage = "Unexpected error: ${e.message}"
@@ -284,17 +284,17 @@ fun App() {
                 }
             }
 
-            fun tryAddConnection(connectionname: ObjectId, sender: ObjectId, receiver: ObjectId, size: SizeString) {
+            fun tryAddConnection(connectionName: ObjectId, sender: ObjectId, receiver: ObjectId, size: SizeString) {
                 errorMessageVisible = false
                 scope.launch(Dispatchers.Default) {
                     try {
-                        val result = api.addConnection(simulationId!!, connectionname, sender, receiver, size)
+                        val result = api.addConnection(simulationId!!, connectionName, sender, receiver, size)
                         val error = result.errorOrNull()
                         if (error != null) {
                             errorMessage = "Could not add connection: ${error.message}"
                             errorMessageVisible = true
                         } else {
-                            connectionsList += "$connectionname ($sender -> $receiver, $size)"
+                            connectionsList += "$connectionName ($sender -> $receiver, $size)"
                         }
                     } catch (e: Exception) {
                         errorMessage = "Unexpected error: ${e.message}"
