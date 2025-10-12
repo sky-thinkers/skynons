@@ -13,7 +13,10 @@ typealias SvgData = String
 sealed interface ApiMessage
 
 @Serializable
+@SerialName("ErrorResponseData")
 data class ErrorResponseData(val err: String) : ApiMessage
+
+data object EmptyMessage : ApiMessage
 
 @Serializable
 @SerialName("SimpleSimulationResult")
