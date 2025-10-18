@@ -29,6 +29,8 @@ interface SkynonsClientApi {
         sizeToSend: SizeString,
     ): ApiResult<Unit>
 
+    suspend fun state(simulationId: SimulationId): ApiResult<SimulationState>
+
     suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult>
 }
 
@@ -44,6 +46,8 @@ sealed interface ApiResult<out T> {
     data class ClientError(override val message: String) : Error
 
     data class ServerError(override val message: String) : Error
+
+    data class NotFound(override val message: String) : Error
 }
 
 class ApiException(message: String, cause: Throwable? = null) : Exception(message, cause)
