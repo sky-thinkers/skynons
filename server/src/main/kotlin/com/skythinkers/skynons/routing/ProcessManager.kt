@@ -5,10 +5,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
+import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.net.ServerSocket
 import java.util.concurrent.ConcurrentHashMap
 
@@ -30,19 +30,19 @@ class NonsProcessManager(private val nonsPath: String, private val scope: Corout
     }
 
     private suspend fun tryStartBackend(): NonsProcess? {
-        val conf = File.createTempFile("variable-config", ".yml")
         repeat(5) {
             val port = findFreePort() ?: return null
-            conf.writeText("listen-port: $port")
             val process =
-                ProcessBuilder(nonsPath, "--server-variable-config", conf.absolutePath.toString()).redirectErrorStream(
+                ProcessBuilder(nonsPath, "--server-port", port.toString()).redirectErrorStream(
                     true
                 ).start()
             delay(100) // let server start
-            if (!process.isAlive) return@repeat
+            if (!process.isAlive) {
+                log.error(process.inputStream.bufferedReader().use { it.readText() })
+                return@repeat
+            }
             return NonsProcess(port, process, client, scope)
         }
-        conf.delete()
 
         return null
     }
@@ -61,5 +61,9 @@ class NonsProcessManager(private val nonsPath: String, private val scope: Corout
     override fun close() {
         portToNonsProcess.values.forEach { process -> process.stop() }
         portToNonsProcess.clear()
+    }
+
+    companion object {
+        private val log = KtorSimpleLogger("NonsProcessManager")
     }
 }

@@ -30,25 +30,29 @@ class NonsProcess(
     private val messageQueue = Channel<Msg>(Channel.BUFFERED)
 
     private var job: Job = scope.launch {
-        while (process.isAlive && isActive) {
-            client.webSocket("ws://localhost:$$port/pipe") {
-                while (!stopSemaphore.tryAcquire() && isActive) {
-                    val msgRes = messageQueue.receiveCatching()
-                    if (msgRes.isFailure || stopSemaphore.tryAcquire() || !isActive) break
-                    val msg = msgRes.getOrNull() ?: break
+        runCatching {
+            while (process.isAlive && isActive) {
+                client.webSocket("ws://localhost:$port/pipe") {
+                    while (!stopSemaphore.tryAcquire() && isActive) {
+                        val msgRes = messageQueue.receiveCatching()
+                        if (msgRes.isFailure || stopSemaphore.tryAcquire() || !isActive) break
+                        val msg = msgRes.getOrNull() ?: break
 
-                    sendSerialized(msg.msg)
-                    val response = runCatching { receiveDeserialized<ApiMessage>() }
-                    msg.cont.resumeWith(response)
+                        sendSerialized(msg.msg)
+                        val response = runCatching { receiveDeserialized<ApiMessage>() }
+                        msg.cont.resumeWith(response)
+                    }
+                    send(Frame.Close("END_SIMULATION".toByteArray()))
+                    delay(1000)
+                    process.destroy()
+                    process.waitFor(1, TimeUnit.MILLISECONDS)
                 }
-                send(Frame.Close("END_SIMULATION".toByteArray()))
-                delay(1000)
-                process.destroy()
-                process.waitFor(1, TimeUnit.MILLISECONDS)
             }
-        }
-        if (process.isAlive) {
-            process.destroy()
+            if (process.isAlive) {
+                process.destroy()
+            }
+        }.onFailure {
+            stop()
         }
     }
 
