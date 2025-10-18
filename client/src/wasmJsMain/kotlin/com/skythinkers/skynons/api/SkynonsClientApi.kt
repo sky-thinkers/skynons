@@ -29,6 +29,8 @@ interface SkynonsClientApi {
         sizeToSend: SizeString,
     ): ApiResult<Unit>
 
+    suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<Unit>
+
     suspend fun state(simulationId: SimulationId): ApiResult<SimulationState>
 
     suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult>

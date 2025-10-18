@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.Js
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -152,6 +153,15 @@ class SkynonsClientApiImpl(
         }
     }
 
+    override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<Unit> {
+        val response = httpClient.delete(apiAddress + removeObjectEndpoint(simulationId)) {
+            setBody(RemoveObject(objectId))
+            contentType(ContentType.Application.Json)
+        }
+        return handleResponseDefault(response) {
+            ApiResult.Success(Unit)
+        }
+    }
     override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
         val response = httpClient.get(apiAddress + stateEndpoint(simulationId))
 
@@ -201,6 +211,7 @@ class SkynonsClientApiImpl(
         private fun addLinkEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_link"
         private fun addConnectionEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_connection"
         private fun stateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/state"
+        private fun removeObjectEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/remove_object"
         private fun simulateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/simulate"
     }
 }
