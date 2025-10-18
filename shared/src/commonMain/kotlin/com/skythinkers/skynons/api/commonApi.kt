@@ -29,6 +29,13 @@ typealias SpeedString = String
 typealias SizeString = String
 
 @Serializable
+@SerialName("RemoveObject")
+data class RemoveObject(
+    @SerialName("object_id")
+    val id: ObjectId
+) : ApiMessage
+
+@Serializable
 @SerialName("CreateSimulationResponseData")
 data class CreateSimulationResponseData(
     val id: SimulationId,
