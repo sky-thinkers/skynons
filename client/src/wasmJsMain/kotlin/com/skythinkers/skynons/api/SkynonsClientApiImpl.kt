@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.Js
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -84,7 +85,7 @@ class SkynonsClientApiImpl(
         name: ObjectId,
     ): ApiResult<Unit> {
         val response = httpClient.post(apiAddress + addHostEndpoint(simulationId)) {
-            setBody(AddHostRequestData(name))
+            setBody(Host(name))
             contentType(ContentType.Application.Json)
         }
 
@@ -99,7 +100,7 @@ class SkynonsClientApiImpl(
         name: ObjectId,
     ): ApiResult<Unit>  {
         val response = httpClient.post(apiAddress + addSwitchEndpoint(simulationId)) {
-            setBody(AddSwitchRequestData(name))
+            setBody(Switch(name))
             contentType(ContentType.Application.Json)
         }
 
@@ -115,7 +116,7 @@ class SkynonsClientApiImpl(
         speed: SpeedString,
     ): ApiResult<Unit>  {
         val response = httpClient.post(apiAddress + addLinkEndpoint(simulationId)) {
-            setBody(AddLinkRequestData(
+            setBody(Link(
                 name,
                 fromId,
                 toId,
@@ -137,7 +138,7 @@ class SkynonsClientApiImpl(
         sizeToSend: SizeString,
     ): ApiResult<Unit>  {
         val response = httpClient.post(apiAddress + addConnectionEndpoint(simulationId)) {
-            setBody(AddConnectionRequestData(
+            setBody(Connection(
                 name,
                 senderId,
                 receiverId,
@@ -148,6 +149,17 @@ class SkynonsClientApiImpl(
 
         return handleResponseDefault(response) {
             ApiResult.Success(Unit)
+        }
+    }
+
+    override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
+        val response = httpClient.get(apiAddress + stateEndpoint(simulationId))
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<SimulationState>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response)
         }
     }
 
@@ -170,6 +182,8 @@ class SkynonsClientApiImpl(
 
         HttpStatusCode.BadRequest -> ApiResult.ClientError(response.bodyAsText())
 
+        HttpStatusCode.NotFound -> ApiResult.NotFound(response.bodyAsText())
+
         HttpStatusCode.InternalServerError -> ApiResult.ServerError(response.bodyAsText())
 
         else -> ApiResult.MalformedResponseError("Unexpected server response code ${response.status}")
@@ -186,6 +200,7 @@ class SkynonsClientApiImpl(
         private fun addSwitchEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_switch"
         private fun addLinkEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_link"
         private fun addConnectionEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_connection"
+        private fun stateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/state"
         private fun simulateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/simulate"
     }
 }
