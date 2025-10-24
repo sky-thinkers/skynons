@@ -1,6 +1,6 @@
 package com.skythinkers.skynons.routing
 
-import com.skythinkers.skynons.api.ApiMessage
+import com.skythinkers.skynons.api.SimulationApiMessage
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
@@ -39,7 +39,7 @@ class NonsProcess(
                         val msg = msgRes.getOrNull() ?: break
 
                         sendSerialized(msg.msg)
-                        val response = runCatching { receiveDeserialized<ApiMessage>() }
+                        val response = runCatching { receiveDeserialized<SimulationApiMessage>() }
                         msg.cont.resumeWith(response)
                     }
                     send(Frame.Close("END_SIMULATION".toByteArray()))
@@ -68,7 +68,7 @@ class NonsProcess(
         }
     }
 
-    suspend fun message(message: ApiMessage): ApiMessage {
+    suspend fun message(message: SimulationApiMessage): SimulationApiMessage {
         return suspendCancellableCoroutine { cont ->
             messageQueue.trySendBlocking(Msg(message, cont)).onFailure {
                 cont.resumeWithException(
@@ -78,5 +78,5 @@ class NonsProcess(
         }
     }
 
-    private data class Msg(val msg: ApiMessage, val cont: CancellableContinuation<ApiMessage>)
+    private data class Msg(val msg: SimulationApiMessage, val cont: CancellableContinuation<SimulationApiMessage>)
 }

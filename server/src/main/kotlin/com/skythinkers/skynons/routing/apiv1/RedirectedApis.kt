@@ -27,11 +27,11 @@ fun Route.addConnection(processManager: NonsProcessManager) {
 }
 
 fun Route.getState(processManager: NonsProcessManager) {
-    redirectSimulationPostRequest<EmptyMessage, SimulationState>(processManager, "state")
+    redirectSimulationGetRequest<EmptyMessage, SimulationState>(processManager, "state")
 }
 
 fun Route.removeObject(processManager: NonsProcessManager) {
-    redirectSimulationPostRequest<RemoveObject, EmptyMessage>(processManager, "remove_object")
+    redirectSimulationDeleteRequest<RemoveObject, EmptyMessage>(processManager, "remove_object")
 }
 
 fun Route.simulate(processManager: NonsProcessManager) {

@@ -1,6 +1,6 @@
 package com.skythinkers.skynons.routing.apiv1
 
-import com.skythinkers.skynons.api.ApiMessage
+import com.skythinkers.skynons.api.SimulationApiMessage
 import com.skythinkers.skynons.api.EmptyMessage
 import com.skythinkers.skynons.api.ErrorResponseData
 import com.skythinkers.skynons.routing.NonsProcessManager
@@ -16,7 +16,7 @@ import io.ktor.server.routing.post
 import io.ktor.util.logging.KtorSimpleLogger
 import io.ktor.util.logging.Logger
 
-inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : ApiMessage> Route.redirectSimulationPostRequest(
+inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBodyType : SimulationApiMessage> Route.redirectSimulationPostRequest(
     processManager: NonsProcessManager,
     methodName: String,
     logger: Logger = KtorSimpleLogger("API_V1/post/$methodName")
@@ -26,7 +26,7 @@ inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : Api
     }
 }
 
-inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : ApiMessage> Route.redirectSimulationGetRequest(
+inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBodyType : SimulationApiMessage> Route.redirectSimulationGetRequest(
     processManager: NonsProcessManager,
     methodName: String,
     logger: Logger = KtorSimpleLogger("API_V1/get/$methodName")
@@ -36,7 +36,7 @@ inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : Api
     }
 }
 
-inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : ApiMessage> Route.redirectSimulationDeleteRequest(
+inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBodyType : SimulationApiMessage> Route.redirectSimulationDeleteRequest(
     processManager: NonsProcessManager,
     methodName: String,
     logger: Logger = KtorSimpleLogger("API_V1/delete/$methodName")
@@ -46,7 +46,7 @@ inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : Api
     }
 }
 
-suspend inline fun <reified RequestBodyType : ApiMessage, reified ResponseBodyType : ApiMessage> RoutingContext.redirectSimulationRequestHandler(
+suspend inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBodyType : SimulationApiMessage> RoutingContext.redirectSimulationRequestHandler(
     processManager: NonsProcessManager,
     logger: Logger,
 ) {

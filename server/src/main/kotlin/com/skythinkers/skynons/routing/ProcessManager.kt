@@ -1,6 +1,6 @@
 package com.skythinkers.skynons.routing
 
-import com.skythinkers.skynons.api.ApiMessage
+import com.skythinkers.skynons.api.SimulationApiMessage
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.websocket.WebSockets
@@ -51,7 +51,7 @@ class NonsProcessManager(private val nonsPath: String, private val scope: Corout
         return portToNonsProcess.containsKey(port)
     }
 
-    suspend fun message(port: Port, message: ApiMessage): ApiMessage {
+    suspend fun message(port: Port, message: SimulationApiMessage): SimulationApiMessage {
         return portToNonsProcess.getValue(port).message(message)
     }
 
