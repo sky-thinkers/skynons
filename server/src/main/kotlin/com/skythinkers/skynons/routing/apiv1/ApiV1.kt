@@ -12,5 +12,7 @@ fun Route.apiV1(nonsPath: String) {
     addSwitch(processManager)
     addLink(processManager)
     addConnection(processManager)
+    getState(processManager)
+    removeObject(processManager)
     simulate(processManager)
 }

@@ -34,7 +34,6 @@ typealias SizeString = String
 @Serializable
 @SerialName("RemoveObject")
 data class RemoveObject(
-    @SerialName("object_id")
     val id: ObjectId
 ) : ApiMessage
 
