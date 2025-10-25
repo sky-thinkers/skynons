@@ -16,7 +16,7 @@ data class RegistrationRequest(
 ) : UserApiMessage
 
 @Serializable
-@SerialName("RegistrationRequest")
+@SerialName("ShortUserInfo")
 data class ShortUserInfo(
     val uid: UserId,
     val login: String,
