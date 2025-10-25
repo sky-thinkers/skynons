@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.PlatformContext
-import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
@@ -31,7 +30,8 @@ fun App() {
         val localContext = LocalPlatformContext.current
         val scope = rememberCoroutineScope()
 
-        val api = remember(localContext) { SkynonsClientApiImpl() }
+        //val api = remember(localContext) { SkynonsClientApiImpl() }
+        val api = remember(localContext) { SkynonsClientApiMock() }
 
         var simulationId by remember(localContext) { mutableStateOf<String?>(null) }
 
@@ -43,8 +43,6 @@ fun App() {
             if (result == null) {
                 connectionError =
                     "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
-                //TODO(This is for testing purposes)
-                //simulationId = "1"
             } else {
                 simulationId = result
             }
@@ -96,10 +94,25 @@ fun GraphRedactor(
     var showLinkDialog by remember { mutableStateOf(false) }
     var showConnectionDialog by remember { mutableStateOf(false) }
 
-    val hostsList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
-    val switchesList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
-    val linksList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
-    val connectionsList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
+    var hostsList by remember { mutableStateOf<List<Host>>(emptyList()) }
+    var switchesList by remember { mutableStateOf<List<Switch>>(emptyList()) }
+    var linksList by remember { mutableStateOf<List<Link>>(emptyList()) }
+    var connectionsList by remember { mutableStateOf<List<Connection>>(emptyList()) }
+
+    fun removeDevice(id: ObjectId) {
+        for (host in hostsList.filter { it.name == id }) {
+            hostsList -= host
+        }
+        for (switch in switchesList.filter { it.name == id }) {
+            switchesList -= switch
+        }
+        for (link in linksList.filter { it.name == id }) {
+            linksList -= link
+        }
+        for (connection in connectionsList.filter { it.name == id }) {
+            connectionsList -= connection
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -119,18 +132,82 @@ fun GraphRedactor(
                         RoundedCornerShape(2)
                     )
             ) {
-                ObjectsList(hostsList, "Add host") {
-                    showHostDialog = true
-                }
-                ObjectsList(switchesList, "Add switch") {
-                    showSwitchDialog = true
-                }
-                ObjectsList(linksList, "Add link") {
-                    showLinkDialog = true
-                }
-                ObjectsList(connectionsList, "Add connection") {
-                    showConnectionDialog = true
-                }
+                ObjectsList(hostsList, "Add host",
+                    onAddElement = {
+                        showHostDialog = true
+                    },
+                    onDeleteElement = { id ->
+                        tryRemoveObject(
+                            id, scope, api, simulationId,
+                            onFailure = { message ->
+                                errorMessage = message
+                                errorMessageVisible = true
+                            },
+                            onSuccess = { objects ->
+                                for (obj in objects) {
+                                    removeDevice(obj)
+                                }
+                            }
+                        )
+                    }
+                )
+                ObjectsList(switchesList, "Add switch",
+                    onAddElement = {
+                        showSwitchDialog = true
+                    },
+                    onDeleteElement = { id ->
+                        tryRemoveObject(
+                            id, scope, api, simulationId,
+                            onFailure = { message ->
+                                errorMessage = message
+                                errorMessageVisible = true
+                            },
+                            onSuccess = { objects ->
+                                for (obj in objects) {
+                                    removeDevice(obj)
+                                }
+                            }
+                        )
+                    }
+                )
+                ObjectsList(linksList, "Add link",
+                    onAddElement = {
+                        showLinkDialog = true
+                    },
+                    onDeleteElement = { id ->
+                        tryRemoveObject(
+                            id, scope, api, simulationId,
+                            onFailure = { message ->
+                                errorMessage = message
+                                errorMessageVisible = true
+                            },
+                            onSuccess = { objects ->
+                                for (obj in objects) {
+                                    removeDevice(obj)
+                                }
+                            }
+                        )
+                    }
+                )
+                ObjectsList(connectionsList, "Add connection",
+                    onAddElement = {
+                        showConnectionDialog = true
+                    },
+                    onDeleteElement = { id ->
+                        tryRemoveObject(
+                            id, scope, api, simulationId,
+                            onFailure = { message ->
+                                errorMessage = message
+                                errorMessageVisible = true
+                            },
+                            onSuccess = { objects ->
+                                for (obj in objects) {
+                                    removeDevice(obj)
+                                }
+                            }
+                        )
+                    }
+                )
             }
 
             // Диалоги
@@ -146,7 +223,7 @@ fun GraphRedactor(
                                 errorMessageVisible = true
                             },
                             onSuccess = {
-                                hostsList += input
+                                hostsList += Host(input)
                             })
                     },
                     title = "Enter new host name",
@@ -166,7 +243,7 @@ fun GraphRedactor(
                                 errorMessageVisible = true
                             },
                             onSuccess = {
-                                switchesList += input
+                                switchesList += Switch(input)
                             })
                     },
                     title = "Enter new switch name",
@@ -186,7 +263,7 @@ fun GraphRedactor(
                                 errorMessageVisible = true
                             },
                             onSuccess = {
-                                linksList += "$name ($from -> $to, $speed)"
+                                linksList += Link(name, from, to, speed)
                             })
                     },
                     title = "Enter new link data",
@@ -208,7 +285,7 @@ fun GraphRedactor(
                                 errorMessageVisible = true
                             },
                             onSuccess = {
-                                connectionsList += "$name ($sender -> $receiver, $size)"
+                                connectionsList += Connection(name, sender, receiver, size)
                             })
                     },
                     title = "Enter new connection data",

@@ -29,7 +29,7 @@ interface SkynonsClientApi {
         sizeToSend: SizeString,
     ): ApiResult<Unit>
 
-    suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<Unit>
+    suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<List<ObjectId>>
 
     suspend fun state(simulationId: SimulationId): ApiResult<SimulationState>
 
@@ -54,6 +54,7 @@ sealed interface ApiResult<out T> {
 
 class ApiException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+@OptIn(ExperimentalContracts::class)
 fun <T> ApiResult<T>.resultOrThrow(): T {
     contract {
         returns() implies (this@resultOrThrow is ApiResult.Success<*>)
