@@ -7,55 +7,59 @@ class SimulationServerMock {
     var myConnections = emptyList<Connection>()
 
     private fun deviceExists(name: String): Boolean {
-        return myHosts.map { it.name }.contains(name) ||
-                mySwitches.map { it.name }.contains(name) ||
-                myLinks.map { it.name }.contains(name) ||
-                myConnections.map { it.name }.contains(name)
+        return myHosts.any { it.name == name } ||
+                mySwitches.any { it.name == name } ||
+                myLinks.any { it.name == name } ||
+                myConnections.any { it.name == name }
     }
 
     private fun dataHolderExists(name: String): Boolean {
-        return myHosts.map { it.name }.contains(name) ||
-                mySwitches.map { it.name }.contains(name)
+        return myHosts.any { it.name == name } ||
+                mySwitches.any { it.name == name }
     }
 
-    fun addHost(host: Host) {
+    fun addHost(host: Host): ApiResult<Unit>? {
         if (deviceExists(host.name)) {
-            throw Exception("Device with this id already exists")
+            return null
         }
         myHosts += host
+        return ApiResult.Success(Unit)
     }
 
-    fun addSwitch(switch: Switch) {
+    fun addSwitch(switch: Switch): ApiResult<Unit>? {
         if (deviceExists(switch.name)) {
-            throw Exception("Device with this id already exists")
+            return null
         }
         mySwitches += switch
+        return ApiResult.Success(Unit)
     }
 
-    fun addLink(link: Link) {
+    fun addLink(link: Link): ApiResult<Unit>? {
         if (deviceExists(link.name)) {
-            throw Exception("Device with this id already exists")
+            return null
         }
         if (!dataHolderExists(link.fromId)) {
-            throw Exception("There is no sender with this id")
+            return null
         }
         if (!dataHolderExists(link.toId)) {
-            throw Exception("There is no receiver with this id")
+            return null
         }
         myLinks += link
+        return ApiResult.Success(Unit)
     }
 
-    fun addConnection(connection: Connection) {
+    fun addConnection(connection: Connection): ApiResult<Unit>? {
         if (deviceExists(connection.name)) {
-            throw Exception("Device with this id already exists")
+            return null
         }
         if (!dataHolderExists(connection.senderId)) {
-            throw Exception("There is no sender with this id")
+            return null
         }
         if (!dataHolderExists(connection.receiverId)) {
-            throw Exception("There is no receiver with this id")
+            return null
         }
         myConnections += connection
+        return ApiResult.Success(Unit)
     }
 
     fun removeObject(objectId: ObjectId): List<ObjectId> {
@@ -137,23 +141,13 @@ class SkynonsClientApiMock : SkynonsClientApi {
     override suspend fun addHost(simulationId: SimulationId, name: ObjectId): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        try {
-            simulations[id].addHost(Host(name))
-        } catch (e: Exception) {
-            return ApiResult.ServerError(e.message ?: "Unrecognized exception")
-        }
-        return ApiResult.Success(Unit)
+        return simulations.getOrNull(id)?.addHost(Host(name)) ?: ApiResult.ServerError("Unrecognized exception")
     }
 
     override suspend fun addSwitch(simulationId: SimulationId, name: ObjectId): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        try {
-            simulations[id].addSwitch(Switch(name))
-        } catch (e: Exception) {
-            return ApiResult.ServerError(e.message ?: "Unrecognized exception")
-        }
-        return ApiResult.Success(Unit)
+        return simulations.getOrNull(id)?.addSwitch(Switch(name)) ?: ApiResult.ServerError("Unrecognized exception")
     }
 
     override suspend fun addLink(
@@ -165,12 +159,7 @@ class SkynonsClientApiMock : SkynonsClientApi {
     ): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        try {
-            simulations[id].addLink(Link(name, fromId, toId, speed))
-        } catch (e: Exception) {
-            return ApiResult.ServerError(e.message ?: "Unrecognized exception")
-        }
-        return ApiResult.Success(Unit)
+        return simulations.getOrNull(id)?.addLink(Link(name, fromId, toId, speed)) ?: ApiResult.ServerError("Unrecognized exception")
     }
 
     override suspend fun addConnection(
@@ -182,20 +171,15 @@ class SkynonsClientApiMock : SkynonsClientApi {
     ): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        try {
-            simulations[id].addConnection(Connection(name, senderId, receiverId, sizeToSend))
-        } catch (e: Exception) {
-            return ApiResult.ServerError(e.message ?: "Unrecognized exception")
-        }
-        return ApiResult.Success(Unit)
+        return simulations.getOrNull(id)?.addConnection(Connection(name, senderId, receiverId, sizeToSend)) ?: ApiResult.ServerError("Unrecognized exception")
     }
 
     override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<List<ObjectId>> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        return try {
+        return runCatching {
             ApiResult.Success(simulations[id].removeObject(objectId))
-        } catch (e: Exception) {
+        }.getOrElse { e ->
             ApiResult.ServerError(e.message ?: "Unrecognized exception")
         }
     }
@@ -203,7 +187,8 @@ class SkynonsClientApiMock : SkynonsClientApi {
     override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        try {
+
+        return runCatching {
             val sim = simulations[id]
             val state = SimulationState(
                 hosts = sim.myHosts,
@@ -211,19 +196,19 @@ class SkynonsClientApiMock : SkynonsClientApi {
                 links = sim.myLinks,
                 connections = sim.myConnections
             )
-            return ApiResult.Success(state)
-        } catch (e: Exception) {
-            return ApiResult.ServerError(e.message ?: "Unrecognized exception")
+            ApiResult.Success(state)
+        }.getOrElse { e ->
+            ApiResult.ServerError(e.message ?: "Unrecognized exception")
         }
     }
 
     override suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        return try {
+        return runCatching {
             val sim = simulations[id]
             ApiResult.Success(sim.simulate())
-        } catch (e: Exception) {
+        }.getOrElse { e ->
             ApiResult.ServerError(e.message ?: "Unrecognized exception")
         }
     }

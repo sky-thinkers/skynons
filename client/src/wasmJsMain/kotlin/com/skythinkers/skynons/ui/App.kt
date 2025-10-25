@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.HoverInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -67,7 +69,7 @@ fun GraphRedactor(
     api: SkynonsClientApi,
     simulationId: SimulationId
 ) {
-    val screenHeight = window.innerHeight
+//    val screenHeight = window.innerHeight
     val screenWidth = window.innerWidth
 
     val imageLoader = remember(localContext) {
@@ -81,9 +83,6 @@ fun GraphRedactor(
     var buttonEnabled by remember { mutableStateOf(true) }
     var buttonText by remember { mutableStateOf("Simulate") }
 
-    var errorMessageVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("Непредвиденная ошибка") }
-
     var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var cwndSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var rateSvg by remember { mutableStateOf<ImageRequest?>(null) }
@@ -94,25 +93,7 @@ fun GraphRedactor(
     var showLinkDialog by remember { mutableStateOf(false) }
     var showConnectionDialog by remember { mutableStateOf(false) }
 
-    var hostsList by remember { mutableStateOf<List<Host>>(emptyList()) }
-    var switchesList by remember { mutableStateOf<List<Switch>>(emptyList()) }
-    var linksList by remember { mutableStateOf<List<Link>>(emptyList()) }
-    var connectionsList by remember { mutableStateOf<List<Connection>>(emptyList()) }
-
-    fun removeDevice(id: ObjectId) {
-        for (host in hostsList.filter { it.name == id }) {
-            hostsList -= host
-        }
-        for (switch in switchesList.filter { it.name == id }) {
-            switchesList -= switch
-        }
-        for (link in linksList.filter { it.name == id }) {
-            linksList -= link
-        }
-        for (connection in connectionsList.filter { it.name == id }) {
-            connectionsList -= connection
-        }
-    }
+    val state = remember { RedactorState(scope, api, simulationId) }
 
     Row(
         modifier = Modifier
@@ -132,82 +113,18 @@ fun GraphRedactor(
                         RoundedCornerShape(2)
                     )
             ) {
-                ObjectsList(hostsList, "Add host",
-                    onAddElement = {
-                        showHostDialog = true
-                    },
-                    onDeleteElement = { id ->
-                        tryRemoveObject(
-                            id, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = { objects ->
-                                for (obj in objects) {
-                                    removeDevice(obj)
-                                }
-                            }
-                        )
-                    }
-                )
-                ObjectsList(switchesList, "Add switch",
-                    onAddElement = {
-                        showSwitchDialog = true
-                    },
-                    onDeleteElement = { id ->
-                        tryRemoveObject(
-                            id, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = { objects ->
-                                for (obj in objects) {
-                                    removeDevice(obj)
-                                }
-                            }
-                        )
-                    }
-                )
-                ObjectsList(linksList, "Add link",
-                    onAddElement = {
-                        showLinkDialog = true
-                    },
-                    onDeleteElement = { id ->
-                        tryRemoveObject(
-                            id, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = { objects ->
-                                for (obj in objects) {
-                                    removeDevice(obj)
-                                }
-                            }
-                        )
-                    }
-                )
-                ObjectsList(connectionsList, "Add connection",
-                    onAddElement = {
-                        showConnectionDialog = true
-                    },
-                    onDeleteElement = { id ->
-                        tryRemoveObject(
-                            id, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = { objects ->
-                                for (obj in objects) {
-                                    removeDevice(obj)
-                                }
-                            }
-                        )
-                    }
-                )
+                state.ObjectsList<Host>("Add host") {
+                    showHostDialog = true
+                }
+                state.ObjectsList<Switch>("Add switch") {
+                    showSwitchDialog = true
+                }
+                state.ObjectsList<Link>("Add link") {
+                    showLinkDialog = true
+                }
+                state.ObjectsList<Connection>("Add connection") {
+                    showConnectionDialog = true
+                }
             }
 
             // Диалоги
@@ -216,15 +133,7 @@ fun GraphRedactor(
                     onDismissRequest = { showHostDialog = false },
                     onConfirm = { input ->
                         showHostDialog = false
-                        tryAddHost(
-                            input, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                hostsList += Host(input)
-                            })
+                        state.tryAddHost(input)
                     },
                     title = "Enter new host name",
                     label = "Name"
@@ -236,15 +145,7 @@ fun GraphRedactor(
                     onDismissRequest = { showSwitchDialog = false },
                     onConfirm = { input ->
                         showSwitchDialog = false
-                        tryAddSwitch(
-                            input, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                switchesList += Switch(input)
-                            })
+                        state.tryAddSwitch(input)
                     },
                     title = "Enter new switch name",
                     label = "Name"
@@ -256,15 +157,7 @@ fun GraphRedactor(
                     onDismissRequest = { showLinkDialog = false },
                     onConfirm = { name, from, to, speed ->
                         showLinkDialog = false
-                        tryAddLink(
-                            name, from, to, speed, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                linksList += Link(name, from, to, speed)
-                            })
+                        state.tryAddLink(name, from, to, speed)
                     },
                     title = "Enter new link data",
                     label1 = "Link's name",
@@ -278,15 +171,7 @@ fun GraphRedactor(
                 FourInputsDialog(
                     onDismissRequest = { showConnectionDialog = false },
                     onConfirm = { name, sender, receiver, size ->
-                        tryAddConnection(
-                            name, sender, receiver, size, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                connectionsList += Connection(name, sender, receiver, size)
-                            })
+                        state.tryAddConnection(name, sender, receiver, size)
                     },
                     title = "Enter new connection data",
                     label1 = "Connection name",
@@ -301,31 +186,25 @@ fun GraphRedactor(
                 onClick = {
                     buttonEnabled = false
                     buttonText = "Simulating..."
-                    errorMessageVisible = false
-                    scope.launch(Dispatchers.Default) {
-                        try {
-                            val response = api.simulate(simulationId)
-                            val result = response.resultOrNull()
-                            buttonEnabled = true
-                            buttonText = "Simulate"
-                            if (result != null) {
-                                rttSvg =
-                                    ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
-                                cwndSvg =
-                                    ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
-                                rateSvg =
-                                    ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
-                                packetReorderingSvg =
-                                    ImageRequest.Builder(localContext)
-                                        .data(result.packetReordering.toByteArray())
-                                        .build()
-                            } else {
-                                errorMessage = response.errorOrNull()?.message ?: "Непредвиденная ошибка"
-                                errorMessageVisible = true
-                            }
-                        } catch (e: Exception) {
-                            errorMessage = "Непредвиденная ошибка: ${e.message}"
-                            errorMessageVisible = true
+                    state.clearError()
+                    state.apiAction {
+                        val response = api.simulate(simulationId)
+                        val result = response.resultOrNull()
+                        buttonEnabled = true
+                        buttonText = "Simulate"
+                        if (result != null) {
+                            rttSvg =
+                                ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
+                            cwndSvg =
+                                ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
+                            rateSvg =
+                                ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
+                            packetReorderingSvg =
+                                ImageRequest.Builder(localContext)
+                                    .data(result.packetReordering.toByteArray())
+                                    .build()
+                        } else {
+                            state.showError(response.errorOrNull()?.message ?: "Непредвиденная ошибка")
                         }
                     }
                 },
@@ -335,10 +214,10 @@ fun GraphRedactor(
             }
 
             // Сообщение об ошибке
-            AnimatedVisibility(errorMessageVisible) {
+            AnimatedVisibility(state.errorMessageVisible) {
                 SelectionContainer {
                     Text(
-                        errorMessage,
+                        state.errorMessage,
                         modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
                     )
                 }
