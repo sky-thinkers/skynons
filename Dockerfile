@@ -45,3 +45,9 @@ COPY --from=builder --exclude=*.map /home/builder/repo/outputs/client .
 COPY --chown=nginx nginx/10-app.conf /etc/nginx/templates/10-app.conf.template
 ARG CLIENT_PORT
 ARG SERVER_ADDRESS
+ENV DB_EMBEDDED false
+ARG DB_URL
+ARG DB_USER
+ARG DB_PASSWORD
+ARG AUTH_SECRET
+ARG AUTH_PEPPER

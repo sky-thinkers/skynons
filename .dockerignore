@@ -3,6 +3,7 @@
 /.gitattributes
 Dockerfile
 docker-compose.yml
+/local
 
 /.env
 /.env-template
