@@ -153,15 +153,17 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<Unit> {
+    override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<List<ObjectId>> {
         val response = httpClient.delete(apiAddress + removeObjectEndpoint(simulationId)) {
             setBody(RemoveObject(objectId))
             contentType(ContentType.Application.Json)
         }
         return handleResponseDefault(response) {
-            ApiResult.Success(Unit)
+            //TODO("Return list of objects to remove")
+            ApiResult.Success(emptyList())
         }
     }
+
     override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
         val response = httpClient.get(apiAddress + stateEndpoint(simulationId))
 

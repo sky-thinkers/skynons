@@ -1,15 +1,13 @@
 package com.skythinkers.skynons.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
@@ -20,12 +18,49 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-val addButtonColors = ButtonColors(
-    Color(0.9f, 0.9f, 1f),
-    Color(0f, 0f, 0f),
-    Color(0.75f, 1f, 0.75f),
-    Color(0.5f, 0.5f, 0.5f)
-)
+object ButtonColor {
+    val ADD = ButtonColors(
+        Color(0.9f, 0.9f, 1f),
+        Color(0f, 0f, 0f),
+        Color(0.75f, 1f, 0.75f),
+        Color(0.5f, 0.5f, 0.5f)
+    )
+
+    val DELETE = ButtonColors(
+        Color(1.0f, 0.7f, 0.7f),
+        Color(0f, 0f, 0f),
+        Color(0.1f, 0.75f, 0.75f),
+        Color(0.5f, 0.5f, 0.5f)
+    )
+}
+
+fun tryRemoveObject(
+    id: ObjectId,
+    scope: CoroutineScope,
+    api: SkynonsClientApi,
+    simulationId: SimulationId,
+    onFailure: (String) -> Unit,
+    onSuccess: (List<ObjectId>) -> Unit
+) {
+    scope.launch(Dispatchers.Default) {
+        try {
+            val result = api.removeObject(simulationId, id)
+            val objects = result.resultOrNull()
+            if (objects != null) {
+                onSuccess(objects)
+            } else {
+                val error = result.errorOrNull()
+                if (error != null) {
+                    onFailure("Could not remove object: ${error.message}")
+                } else {
+                    onFailure("Unrecognized error")
+                }
+            }
+        } catch (e: Exception) {
+            onFailure("Unexpected error: ${e.message}")
+        }
+    }
+}
 
 fun tryAddHost(
     hostName: ObjectId,
@@ -142,31 +177,65 @@ fun ImageRequest.toImage(description: String, width: Int, imageLoader: ImageLoad
 }
 
 @Composable
-fun MutableList<String>.show() {
+fun List<*>.show(onDeleteButtonClicked: (ObjectId) -> Unit) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start
     ) {
-        this@show.forEach { name ->
-            Text(
-                modifier = Modifier.padding(5.dp).background(Color.White, RoundedCornerShape(35)),
-                text = " $name "
-            )
+        this@show.forEach { obj ->
+            var name = ""
+            var id = ""
+            if (obj is Host) {
+                name = obj.name
+                id = obj.name
+            }
+            if (obj is Switch) {
+                name = obj.name
+                id = obj.name
+            }
+            if (obj is Link) {
+                name = "${obj.name}: ${obj.fromId} -> ${obj.toId} (${obj.speed})"
+                id = obj.name
+            }
+            if (obj is Connection) {
+                name = "${obj.name}: ${obj.senderId} -> ${obj.receiverId} (${obj.sizeToSend})"
+                id = obj.name
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    modifier = Modifier.padding(5.dp).background(Color.White, RoundedCornerShape(35)),
+                    text = " $name "
+                )
+                Button(
+                    modifier = Modifier.padding(2.dp).size(26.dp, 18.dp),
+                    shape = RoundedCornerShape(10),
+                    colors = ButtonColor.DELETE,
+                    onClick = {
+                        onDeleteButtonClicked(id)
+                    }
+                ) {
+                    Text(
+                        text = "-"
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ObjectsList(objects: MutableList<String>, buttonText: String, onAddElement: () -> Unit) {
+fun ObjectsList(objects: List<*>, buttonText: String, onAddElement: () -> Unit, onDeleteElement: (ObjectId) -> Unit) {
     Column(
         modifier = Modifier.padding(5.dp)
     ) {
-        objects.show()
+        objects.show(onDeleteElement)
         Button(
             onClick = {
                 onAddElement()
             },
             shape = RoundedCornerShape(10),
-            colors = addButtonColors
+            colors = ButtonColor.ADD
         ) {
             Text(buttonText)
         }
