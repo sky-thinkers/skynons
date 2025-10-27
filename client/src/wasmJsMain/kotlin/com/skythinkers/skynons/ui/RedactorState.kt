@@ -146,7 +146,7 @@ class RedactorState(
         Column(
             horizontalAlignment = Alignment.Start
         ) {
-            val list = when(typeOf<T>()) {
+            val list = when (typeOf<T>()) {
                 typeOf<Host>() -> hostsList.map { it.name to it.name }
                 typeOf<Switch>() -> switchesList.map { it.name to it.name }
                 typeOf<Link>() -> linksList.map { "${it.name}: ${it.fromId} -> ${it.toId} (${it.speed})" to it.name }
@@ -172,7 +172,8 @@ class RedactorState(
                         text = text
                     )
                     Button(
-                        modifier = Modifier.padding(2.dp).size(26.dp, 18.dp).hoverable(interactionSource = interactionSource),
+                        modifier = Modifier.padding(2.dp).size(26.dp, 18.dp)
+                            .hoverable(interactionSource = interactionSource),
                         shape = RoundedCornerShape(10),
                         colors = ButtonColor.DELETE,
                         onClick = {
@@ -185,7 +186,7 @@ class RedactorState(
     }
 
     @Composable
-    inline fun <reified T: NetworkObject> ObjectsList(buttonText: String, crossinline onAddElement: () -> Unit) {
+    inline fun <reified T : NetworkObject> ObjectsList(buttonText: String, crossinline onAddElement: () -> Unit) {
         Column(
             modifier = Modifier.padding(5.dp)
         ) {
