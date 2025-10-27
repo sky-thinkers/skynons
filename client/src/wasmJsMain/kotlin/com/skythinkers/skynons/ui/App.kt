@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.PlatformContext
-import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
@@ -31,7 +30,8 @@ fun App() {
         val localContext = LocalPlatformContext.current
         val scope = rememberCoroutineScope()
 
-        val api = remember(localContext) { SkynonsClientApiImpl() }
+        //val api = remember(localContext) { SkynonsClientApiImpl() }
+        val api = remember(localContext) { SkynonsClientApiMock() }
 
         var simulationId by remember(localContext) { mutableStateOf<String?>(null) }
 
@@ -43,8 +43,6 @@ fun App() {
             if (result == null) {
                 connectionError =
                     "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
-                //TODO(This is for testing purposes)
-                //simulationId = "1"
             } else {
                 simulationId = result
             }
@@ -69,7 +67,7 @@ fun GraphRedactor(
     api: SkynonsClientApi,
     simulationId: SimulationId
 ) {
-    val screenHeight = window.innerHeight
+//    val screenHeight = window.innerHeight
     val screenWidth = window.innerWidth
 
     val imageLoader = remember(localContext) {
@@ -83,9 +81,6 @@ fun GraphRedactor(
     var buttonEnabled by remember { mutableStateOf(true) }
     var buttonText by remember { mutableStateOf("Simulate") }
 
-    var errorMessageVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("Непредвиденная ошибка") }
-
     var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var cwndSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var rateSvg by remember { mutableStateOf<ImageRequest?>(null) }
@@ -96,10 +91,7 @@ fun GraphRedactor(
     var showLinkDialog by remember { mutableStateOf(false) }
     var showConnectionDialog by remember { mutableStateOf(false) }
 
-    val hostsList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
-    val switchesList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
-    val linksList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
-    val connectionsList by remember { mutableStateOf<MutableList<String>>(mutableListOf()) }
+    val state = remember { RedactorState(scope, api, simulationId) }
 
     Row(
         modifier = Modifier
@@ -119,16 +111,16 @@ fun GraphRedactor(
                         RoundedCornerShape(2)
                     )
             ) {
-                ObjectsList(hostsList, "Add host") {
+                state.ObjectsList<Host>("Add host") {
                     showHostDialog = true
                 }
-                ObjectsList(switchesList, "Add switch") {
+                state.ObjectsList<Switch>("Add switch") {
                     showSwitchDialog = true
                 }
-                ObjectsList(linksList, "Add link") {
+                state.ObjectsList<Link>("Add link") {
                     showLinkDialog = true
                 }
-                ObjectsList(connectionsList, "Add connection") {
+                state.ObjectsList<Connection>("Add connection") {
                     showConnectionDialog = true
                 }
             }
@@ -139,15 +131,7 @@ fun GraphRedactor(
                     onDismissRequest = { showHostDialog = false },
                     onConfirm = { input ->
                         showHostDialog = false
-                        tryAddHost(
-                            input, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                hostsList += input
-                            })
+                        state.tryAddHost(input)
                     },
                     title = "Enter new host name",
                     label = "Name"
@@ -159,15 +143,7 @@ fun GraphRedactor(
                     onDismissRequest = { showSwitchDialog = false },
                     onConfirm = { input ->
                         showSwitchDialog = false
-                        tryAddSwitch(
-                            input, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                switchesList += input
-                            })
+                        state.tryAddSwitch(input)
                     },
                     title = "Enter new switch name",
                     label = "Name"
@@ -179,15 +155,7 @@ fun GraphRedactor(
                     onDismissRequest = { showLinkDialog = false },
                     onConfirm = { name, from, to, speed ->
                         showLinkDialog = false
-                        tryAddLink(
-                            name, from, to, speed, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                linksList += "$name ($from -> $to, $speed)"
-                            })
+                        state.tryAddLink(name, from, to, speed)
                     },
                     title = "Enter new link data",
                     label1 = "Link's name",
@@ -201,15 +169,7 @@ fun GraphRedactor(
                 FourInputsDialog(
                     onDismissRequest = { showConnectionDialog = false },
                     onConfirm = { name, sender, receiver, size ->
-                        tryAddConnection(
-                            name, sender, receiver, size, scope, api, simulationId,
-                            onFailure = { message ->
-                                errorMessage = message
-                                errorMessageVisible = true
-                            },
-                            onSuccess = {
-                                connectionsList += "$name ($sender -> $receiver, $size)"
-                            })
+                        state.tryAddConnection(name, sender, receiver, size)
                     },
                     title = "Enter new connection data",
                     label1 = "Connection name",
@@ -224,31 +184,25 @@ fun GraphRedactor(
                 onClick = {
                     buttonEnabled = false
                     buttonText = "Simulating..."
-                    errorMessageVisible = false
-                    scope.launch(Dispatchers.Default) {
-                        try {
-                            val response = api.simulate(simulationId)
-                            val result = response.resultOrNull()
-                            buttonEnabled = true
-                            buttonText = "Simulate"
-                            if (result != null) {
-                                rttSvg =
-                                    ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
-                                cwndSvg =
-                                    ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
-                                rateSvg =
-                                    ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
-                                packetReorderingSvg =
-                                    ImageRequest.Builder(localContext)
-                                        .data(result.packetReordering.toByteArray())
-                                        .build()
-                            } else {
-                                errorMessage = response.errorOrNull()?.message ?: "Непредвиденная ошибка"
-                                errorMessageVisible = true
-                            }
-                        } catch (e: Exception) {
-                            errorMessage = "Непредвиденная ошибка: ${e.message}"
-                            errorMessageVisible = true
+                    state.clearError()
+                    state.apiAction {
+                        val response = api.simulate(simulationId)
+                        val result = response.resultOrNull()
+                        buttonEnabled = true
+                        buttonText = "Simulate"
+                        if (result != null) {
+                            rttSvg =
+                                ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
+                            cwndSvg =
+                                ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
+                            rateSvg =
+                                ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
+                            packetReorderingSvg =
+                                ImageRequest.Builder(localContext)
+                                    .data(result.packetReordering.toByteArray())
+                                    .build()
+                        } else {
+                            state.showError(response.errorOrNull()?.message ?: "Непредвиденная ошибка")
                         }
                     }
                 },
@@ -258,10 +212,10 @@ fun GraphRedactor(
             }
 
             // Сообщение об ошибке
-            AnimatedVisibility(errorMessageVisible) {
+            AnimatedVisibility(state.errorMessageVisible) {
                 SelectionContainer {
                     Text(
-                        errorMessage,
+                        state.errorMessage,
                         modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
                     )
                 }

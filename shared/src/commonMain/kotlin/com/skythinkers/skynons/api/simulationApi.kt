@@ -9,6 +9,8 @@ typealias ObjectId = String
 
 typealias SvgData = String
 
+sealed interface NetworkObject
+
 @Serializable
 sealed interface SimulationApiMessage : ApiMessage
 
@@ -41,13 +43,13 @@ data class CreateSimulationResponseData(
 @SerialName("Host")
 data class Host(
     val name: ObjectId,
-) : SimulationApiMessage
+) : SimulationApiMessage, NetworkObject
 
 @Serializable
 @SerialName("Switch")
 data class Switch(
     val name: ObjectId,
-) : SimulationApiMessage
+) : SimulationApiMessage, NetworkObject
 
 @Serializable
 @SerialName("Link")
@@ -56,7 +58,7 @@ data class Link(
     @SerialName("from_id") val fromId: ObjectId,
     @SerialName("to_id") val toId: ObjectId,
     val speed: SpeedString,
-) : SimulationApiMessage
+) : SimulationApiMessage, NetworkObject
 
 @Serializable
 @SerialName("Connection")
@@ -65,7 +67,7 @@ data class Connection(
     @SerialName("sender_id") val senderId: ObjectId,
     @SerialName("receiver_id") val receiverId: SpeedString,
     @SerialName("data_to_send") val sizeToSend: SizeString,
-) : SimulationApiMessage
+) : SimulationApiMessage, NetworkObject
 
 @Serializable
 @SerialName("SimulationState")
