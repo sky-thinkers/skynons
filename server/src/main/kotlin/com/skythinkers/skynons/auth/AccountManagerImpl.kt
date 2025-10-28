@@ -8,6 +8,8 @@ import com.skythinkers.skynons.api.PasswordUpdateRequest
 import com.skythinkers.skynons.api.RegistrationRequest
 import com.skythinkers.skynons.api.ShortUserInfo
 import com.skythinkers.skynons.api.UserId
+import com.skythinkers.skynons.database.DatabaseException
+import com.skythinkers.skynons.database.DatabaseResult
 import com.skythinkers.skynons.database.asResult
 import com.skythinkers.skynons.model.user.UserCredentials
 import com.skythinkers.skynons.model.user.UserRegistrationInfo
@@ -46,21 +48,20 @@ class AccountManagerImpl(
             .withIssuer(authConfig.issuer).build()
 
     override suspend fun authenticateUser(loginRequest: LoginRequest): Result<Pair<ShortUserInfo, UserSession>> {
-        val credentials = authConfig.credentialsDatabase.getUserCredentialsByLogin(loginRequest.login)
-            .asResult()
-            .getOrElse {
-                return Result.failure(it) // TODO(firelion9): map errors
+        val credentials =
+            when (val cRes = authConfig.credentialsDatabase.getUserCredentialsByLogin(loginRequest.login)) {
+                is DatabaseResult.Success -> cRes.res
+                !is DatabaseResult.Error -> throw AssertionError("Unreachable code")
+                is DatabaseResult.NotFound -> return Result.failure(AuthFailedException("Wrong login or password"))
+                else -> return Result.failure(AuthFailedException("Internal error", DatabaseException(cRes)))
             }
 
         return if (checkPassword(credentials, loginRequest.password)) {
             logger.debug("Successfully authenticated `${loginRequest.login}`")
             // TODO(firelion9): multiple transactions
-            Result.success(
-                ShortUserInfo(credentials.uid, credentials.login) to
-                        UserSession(
-                            createAndRegisterToken(credentials.uid)
-                                .getOrElse { return Result.failure(it) })
-            ) // TODO(firelion9): map errors
+            createAndRegisterToken(credentials.uid).map {
+                ShortUserInfo(credentials.uid, credentials.login) to UserSession(it)
+            }
         } else {
             logger.debug("Failed to authenticate `${loginRequest.login}`")
             Result.failure(AuthFailedException("Wrong login or password"))
@@ -75,17 +76,24 @@ class AccountManagerImpl(
             salt = salt,
             passwordHash = passwordHash,
         )
-        val userInfo = authConfig.credentialsDatabase.registerUser(registrationInfo)
-            .asResult().getOrElse {
-                logger.debug("Failed to register `${registrationRequest.login}`", it)
-                return Result.failure(it) // TODO(firelion9): map errors
+        val userInfo = when (val cRes = authConfig.credentialsDatabase.registerUser(registrationInfo)) {
+            is DatabaseResult.Success -> cRes.res
+            !is DatabaseResult.Error -> throw AssertionError("Unreachable code")
+            is DatabaseResult.ConstraintViolation -> {
+                logger.debug("Failed to register `${registrationRequest.login}`", DatabaseException(cRes))
+                return Result.failure(AccountException("Use another username"))
             }
 
-        logger.info("Successfully registered user `${registrationInfo.login}")
-        val token = createAndRegisterToken(userInfo.uid).getOrElse {
-            return Result.failure(it) // TODO(firelion9): map errors
+            else -> {
+                logger.debug("Failed to register `${registrationRequest.login}`", DatabaseException(cRes))
+                return Result.failure(AccountException("Internal error", DatabaseException(cRes)))
+            }
         }
-        return Result.success(userInfo to UserSession(token))
+
+        logger.info("Successfully registered user `${registrationInfo.login}")
+        return createAndRegisterToken(userInfo.uid).map {
+            userInfo to UserSession(it)
+        }
     }
 
     override suspend fun updateUserPassword(
@@ -94,23 +102,32 @@ class AccountManagerImpl(
     ): Result<Unit> {
         val credentials = authConfig.credentialsDatabase.getUserCredentialsByUserId(userId).asResult()
             .getOrElse {
-                return Result.failure(it) // TODO(firelion9): map errors
+                logger.debug("Failed to get credentials for uid $userId", it)
+                return Result.failure(AccountException("Internal error", it))
             }
 
         return if (checkPassword(credentials, updateRequest.oldPassword)) {
             logger.debug("Changing password for `$userId`")
             val (salt, passwordHash) = saltAndHash(updateRequest.newPassword)
-            // TODO(firelion9): map errors, multiple transactions
-            authConfig.credentialsDatabase.updateUserPassword(
+            // TODO(firelion9):  multiple transactions
+            when (val cRes = authConfig.credentialsDatabase.updateUserPassword(
                 UserUpdatePasswordInfo(
                     uid = userId,
                     salt = salt,
                     passwordHash = passwordHash,
                 )
-            ).asResult()
+            )) {
+
+                is DatabaseResult.Success -> Result.success(cRes.res)
+                !is DatabaseResult.Error -> throw AssertionError("Unreachable code")
+                else -> {
+                    logger.debug("Failed to update password for uid $userId", DatabaseException(cRes))
+                    return Result.failure(AccountException("Internal error", DatabaseException(cRes)))
+                }
+            }
         } else {
             logger.debug("Old password mismatch when trying to change password for `$userId`")
-            Result.failure(AuthFailedException("Wrong uid or old password"))
+            Result.failure(AccountException("Wrong uid or old password"))
         }
     }
 
@@ -122,20 +139,27 @@ class AccountManagerImpl(
 
         val expirationDate = authConfig.credentialsDatabase.getTokenExpirationDate(hashToken(session.token))
             .asResult().getOrElse {
-                return Result.failure(it) // TODO(firelion9): map errors
+                logger.debug("Failed to get session expiration date for uid ${session.uid}, token ${session.token}", it)
+                return Result.failure(AccountException("Internal error", it))
             } ?: return Result.success(false)
 
         return Result.success(Clock.System.now() <= expirationDate)
     }
 
     override suspend fun invalidateSession(session: UserSession): Result<Unit> {
-        // TODO(firelion9): map errors
         return authConfig.credentialsDatabase.invalidateToken(hashToken(session.token)).asResult()
+            .onFailure {
+                logger.debug("Failed to invalidate session for uid ${session.uid}, token ${session.token}", it)
+                return Result.failure(AccountException("Internal error", it))
+            }
     }
 
     override suspend fun getShortUserInfo(session: UserSession): Result<ShortUserInfo> {
-        // TODO(firelion9): map errors
         return authConfig.database.getUserInfoByUserId(session.uid).asResult()
+            .onFailure {
+                logger.debug("Failed to get short user info for uid ${session.uid}, token ${session.token}", it)
+                return Result.failure(AccountException("Internal error", it))
+            }
     }
 
     override suspend fun cleanupLoop() {

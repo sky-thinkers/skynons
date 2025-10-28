@@ -10,3 +10,10 @@ class AuthFailedException(
     cause = cause
 )
 
+class AccountException(
+    message: String? = null,
+    cause: Throwable? = null,
+) : AuthException(
+    message = message,
+    cause = cause
+)
