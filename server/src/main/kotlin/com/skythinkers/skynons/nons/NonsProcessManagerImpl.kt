@@ -1,4 +1,4 @@
-package com.skythinkers.skynons.routing
+package com.skythinkers.skynons.nons
 
 import com.skythinkers.skynons.api.SimulationApiMessage
 import io.ktor.client.HttpClient
@@ -12,21 +12,19 @@ import kotlinx.serialization.json.Json
 import java.net.ServerSocket
 import java.util.concurrent.ConcurrentHashMap
 
-typealias Port = Int
-
-class NonsProcessManager(private val nonsPath: String, private val scope: CoroutineScope) : AutoCloseable {
+class NonsProcessManagerImpl(private val nonsPath: String, private val scope: CoroutineScope) : NonsProcessManager {
     private val client = HttpClient(OkHttp) {
         install(WebSockets) {
             contentConverter = KotlinxWebsocketSerializationConverter(Json)
         }
     }
-    private val portToNonsProcess = ConcurrentHashMap<Port, NonsProcess>()
+    private val processIdToNonsProcess = ConcurrentHashMap<ProcessId, NonsProcess>()
 
-    suspend fun createSimulation(): Port? {
+    override suspend fun createSimulation(): ProcessId? {
         val process = tryStartBackend() ?: return null
 
-        portToNonsProcess[process.port] = process
-        return process.port
+        processIdToNonsProcess[process.processId] = process
+        return process.processId
     }
 
     private suspend fun tryStartBackend(): NonsProcess? {
@@ -47,20 +45,20 @@ class NonsProcessManager(private val nonsPath: String, private val scope: Corout
         return null
     }
 
-    fun checkPort(port: Port): Boolean {
-        return portToNonsProcess.containsKey(port)
+    override fun checkId(id: ProcessId): Boolean {
+        return processIdToNonsProcess.containsKey(id)
     }
 
-    suspend fun message(port: Port, message: SimulationApiMessage): SimulationApiMessage {
-        return portToNonsProcess.getValue(port).message(message)
+    override suspend fun message(id: ProcessId, message: SimulationApiMessage): SimulationApiMessage {
+        return processIdToNonsProcess.getValue(id).message(message)
     }
 
-    private fun findFreePort(): Port? =
+    private fun findFreePort(): ProcessId? =
         runCatching { ServerSocket(0).use { socket -> socket.localPort } }.getOrNull()
 
     override fun close() {
-        portToNonsProcess.values.forEach { process -> process.stop() }
-        portToNonsProcess.clear()
+        processIdToNonsProcess.values.forEach { process -> process.stop() }
+        processIdToNonsProcess.clear()
     }
 
     companion object {

@@ -2,7 +2,7 @@ package com.skythinkers.skynons.routing.apiv1
 
 import com.skythinkers.skynons.api.CreateSimulationResponseData
 import com.skythinkers.skynons.api.ErrorResponseData
-import com.skythinkers.skynons.routing.NonsProcessManager
+import com.skythinkers.skynons.nons.NonsProcessManager
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route

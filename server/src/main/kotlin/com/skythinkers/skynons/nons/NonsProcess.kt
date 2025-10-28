@@ -1,4 +1,4 @@
-package com.skythinkers.skynons.routing
+package com.skythinkers.skynons.nons
 
 import com.skythinkers.skynons.api.SimulationApiMessage
 import io.ktor.client.HttpClient
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resumeWithException
 
 class NonsProcess(
-    val port: Port,
+    val processId: ProcessId,
     private val process: Process,
     private val client: HttpClient,
     private val scope: CoroutineScope,
@@ -32,7 +32,7 @@ class NonsProcess(
     private var job: Job = scope.launch {
         runCatching {
             while (process.isAlive && isActive) {
-                client.webSocket("ws://localhost:$port/pipe") {
+                client.webSocket("ws://localhost:$processId/pipe") {
                     while (!stopSemaphore.tryAcquire() && isActive) {
                         val msgRes = messageQueue.receiveCatching()
                         if (msgRes.isFailure || stopSemaphore.tryAcquire() || !isActive) break

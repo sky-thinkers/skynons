@@ -15,6 +15,10 @@ sealed interface NetworkObject
 sealed interface SimulationApiMessage : ApiMessage
 
 @Serializable
+@SerialName("SimulationResultRequest")
+data object SimulationResultRequest : SimulationApiMessage
+
+@Serializable
 @SerialName("SimpleSimulationResult")
 data class SimpleSimulationResult(
     val cwnd: SvgData,
@@ -31,6 +35,12 @@ typealias SizeString = String
 @SerialName("RemoveObject")
 data class RemoveObject(
     val id: ObjectId
+) : SimulationApiMessage
+
+@Serializable
+@SerialName("RemovedObjectList")
+data class RemovedObjectList(
+    val ids: List<ObjectId>
 ) : SimulationApiMessage
 
 @Serializable
@@ -68,6 +78,10 @@ data class Connection(
     @SerialName("receiver_id") val receiverId: SpeedString,
     @SerialName("data_to_send") val sizeToSend: SizeString,
 ) : SimulationApiMessage, NetworkObject
+
+@Serializable
+@SerialName("SimulationStateRequest")
+data object SimulationStateRequest : SimulationApiMessage
 
 @Serializable
 @SerialName("SimulationState")

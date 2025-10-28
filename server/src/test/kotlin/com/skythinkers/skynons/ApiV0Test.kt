@@ -1,14 +1,20 @@
 package com.skythinkers.skynons
 
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.server.testing.*
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.server.testing.testApplication
 import kotlin.io.path.Path
 import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ApplicationTest {
+/**
+ * Integration test for API V0. Requires a compiled backend.
+ */
+class ApiV0Test {
 
     @Test
     fun testRoot() = testApplication {

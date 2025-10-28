@@ -5,9 +5,13 @@ import com.skythinkers.skynons.api.EmptyMessage
 import com.skythinkers.skynons.api.Host
 import com.skythinkers.skynons.api.Link
 import com.skythinkers.skynons.api.RemoveObject
+import com.skythinkers.skynons.api.RemovedObjectList
+import com.skythinkers.skynons.api.SimpleSimulationResult
+import com.skythinkers.skynons.api.SimulationResultRequest
 import com.skythinkers.skynons.api.SimulationState
+import com.skythinkers.skynons.api.SimulationStateRequest
 import com.skythinkers.skynons.api.Switch
-import com.skythinkers.skynons.routing.NonsProcessManager
+import com.skythinkers.skynons.nons.NonsProcessManager
 import io.ktor.server.routing.Route
 
 fun Route.addHost(processManager: NonsProcessManager) {
@@ -27,13 +31,20 @@ fun Route.addConnection(processManager: NonsProcessManager) {
 }
 
 fun Route.getState(processManager: NonsProcessManager) {
-    redirectSimulationGetRequest<EmptyMessage, SimulationState>(processManager, "state")
+    redirectSimulationGetRequest<SimulationStateRequest, SimulationState>(
+        processManager, "state",
+        requestBodyReplacement = SimulationStateRequest
+    )
 }
 
 fun Route.removeObject(processManager: NonsProcessManager) {
-    redirectSimulationDeleteRequest<RemoveObject, EmptyMessage>(processManager, "remove_object")
+    redirectSimulationDeleteRequest<RemoveObject, RemovedObjectList>(processManager, "remove_object")
 }
 
 fun Route.simulate(processManager: NonsProcessManager) {
-    redirectSimulationPostRequest<EmptyMessage, Connection>(processManager, "simulate")
+    redirectSimulationPostRequest<SimulationResultRequest, SimpleSimulationResult>(
+        processManager,
+        "simulate",
+        requestBodyReplacement = SimulationResultRequest
+    )
 }
