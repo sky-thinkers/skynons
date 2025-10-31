@@ -111,7 +111,7 @@ class ProcessManagerMock : NonsProcessManager {
                     }
                 }
 
-                SimulationResultRequest -> {
+                is SimulationResultRequest -> {
                     SimpleSimulationResult("", "", "", "")
                 }
 
