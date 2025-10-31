@@ -9,6 +9,8 @@ import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+import io.ktor.util.logging.KtorSimpleLogger
+import io.ktor.util.logging.error
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.io.path.Path
@@ -21,6 +23,7 @@ import kotlin.io.path.readBytes
 import kotlin.io.path.writeText
 
 fun Route.apiV0(nonsPath: String) {
+    val logger = KtorSimpleLogger("APIv0")
     post("/simulate") {
         try {
             val text = call.receiveText()
@@ -49,6 +52,7 @@ fun Route.apiV0(nonsPath: String) {
             if (result != 0) {
                 val stderrReader = BufferedReader(InputStreamReader(process.errorStream))
                 val stderrLines = stderrReader.readLines()
+                logger.error("Backend exit code is $result, stderr: " + stderrLines.joinToString("\n"))
                 call.respond(
                         HttpStatusCode.BadRequest,
                         "Backend error:\n ${stderrLines.joinToString(separator = "\n")}"
@@ -79,6 +83,7 @@ fun Route.apiV0(nonsPath: String) {
 
             call.respond(HttpStatusCode.OK, data)
         } catch (e: Exception) {
+            logger.error(e)
             call.respond(HttpStatusCode.InternalServerError, e.toString())
         }
     }
