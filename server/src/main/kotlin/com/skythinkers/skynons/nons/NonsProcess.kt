@@ -5,9 +5,12 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import io.ktor.client.plugins.websocket.webSocket
+import io.ktor.util.logging.KtorSimpleLogger
+import io.ktor.util.logging.Logger
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onFailure
@@ -25,6 +28,7 @@ class NonsProcess(
     private val process: Process,
     private val client: HttpClient,
     private val scope: CoroutineScope,
+    private val log: Logger = KtorSimpleLogger("NonsProcess/$processId"),
 ) {
     private val stopSemaphore: Semaphore = Semaphore(1, 1)
     private val messageQueue = Channel<Msg>(Channel.BUFFERED)
@@ -33,15 +37,23 @@ class NonsProcess(
         runCatching {
             while (process.isAlive && isActive) {
                 client.webSocket("ws://localhost:$processId/pipe") {
+                    log.trace("enter websocket loop")
                     while (!stopSemaphore.tryAcquire() && isActive) {
                         val msgRes = messageQueue.receiveCatching()
                         if (msgRes.isFailure || stopSemaphore.tryAcquire() || !isActive) break
                         val msg = msgRes.getOrNull() ?: break
+                        log.trace("Passing message of type {}", msg.msg::class.java.name)
 
                         sendSerialized(msg.msg)
+                        log.trace("Awaiting response")
                         val response = runCatching { receiveDeserialized<SimulationApiMessage>() }
+                        log.trace(
+                            "Got response of type {}",
+                            (response.getOrNull() ?: response.exceptionOrNull()!!)::class.java.name
+                        )
                         msg.cont.resumeWith(response)
                     }
+                    log.trace("exit websocket loop")
                     send(Frame.Close("END_SIMULATION".toByteArray()))
                     delay(1000)
                     process.destroy()
@@ -53,6 +65,19 @@ class NonsProcess(
             }
         }.onFailure {
             stop()
+        }
+    }
+
+    private val overlord = scope.launch(Dispatchers.IO) {
+        process.waitFor()
+        if (process.exitValue() != 0) {
+            log.error(
+                "Process terminated with non-zero exit code ${process.exitValue()}. stderr+stdout:\n" + process.inputStream.bufferedReader()
+                    .use { it.readText() })
+        } else {
+            log.trace(
+                "Process terminated with exit code 0. stderr+stdout:\n" + process.inputStream.bufferedReader()
+                    .use { it.readText() })
         }
     }
 
@@ -68,14 +93,17 @@ class NonsProcess(
         }
     }
 
-    suspend fun message(message: SimulationApiMessage): SimulationApiMessage {
-        return suspendCancellableCoroutine { cont ->
+    suspend fun message(message: SimulationApiMessage): SimulationApiMessage = try {
+        suspendCancellableCoroutine { cont ->
             messageQueue.trySendBlocking(Msg(message, cont)).onFailure {
                 cont.resumeWithException(
                     it ?: IllegalStateException("Cannot send message. Is NoNs process still alive?")
                 )
             }
+            log.trace("Suspended on message of type {}", message::class.java.name)
         }
+    } finally {
+        log.trace("Resumed on message of type {}", message::class.java.name)
     }
 
     private data class Msg(val msg: SimulationApiMessage, val cont: CancellableContinuation<SimulationApiMessage>)

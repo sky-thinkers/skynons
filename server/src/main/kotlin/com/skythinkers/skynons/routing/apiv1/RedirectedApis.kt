@@ -13,6 +13,14 @@ import com.skythinkers.skynons.api.SimulationStateRequest
 import com.skythinkers.skynons.api.Switch
 import com.skythinkers.skynons.nons.NonsProcessManager
 import io.ktor.server.routing.Route
+import io.ktor.util.logging.KtorSimpleLogger
+import java.nio.file.Files
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.deleteRecursively
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.readText
 
 fun Route.addHost(processManager: NonsProcessManager) {
     redirectSimulationPostRequest<Host, EmptyMessage>(processManager, "add_host")
@@ -33,7 +41,7 @@ fun Route.addConnection(processManager: NonsProcessManager) {
 fun Route.getState(processManager: NonsProcessManager) {
     redirectSimulationGetRequest<SimulationStateRequest, SimulationState>(
         processManager, "state",
-        requestBodyReplacement = SimulationStateRequest
+        requestBodyReplacement = { SimulationStateRequest }
     )
 }
 
@@ -42,9 +50,34 @@ fun Route.removeObject(processManager: NonsProcessManager) {
 }
 
 fun Route.simulate(processManager: NonsProcessManager) {
+    val logger = KtorSimpleLogger("API/V1/simulate")
     redirectSimulationPostRequest<SimulationResultRequest, SimpleSimulationResult>(
         processManager,
         "simulate",
-        requestBodyReplacement = SimulationResultRequest
+        logger = logger,
+        requestBodyReplacement = {
+            val tempDir = Files.createTempDirectory("simulation-output")
+            SimulationResultRequest(tempDir.absolutePathString())
+        },
+        responseBodyReplacement = { request ->
+            val dataDir = Path(request.outputDir)
+            fun readFile(subPath: String) = dataDir.resolve(subPath).let {
+                if (it.isRegularFile()) it.readText()
+                else {
+                    logger.warn("Failed to read result file $it")
+                    throw SkynonsApiException("Simulation failed")
+                }
+            }
+
+            val res = SimpleSimulationResult(
+                cwnd = readFile("cwnd.svg"),
+                packetReordering = readFile("reordering.svg"),
+                rate = readFile("rate.svg"),
+                rtt = readFile("rtt.svg"),
+            )
+            @OptIn(ExperimentalPathApi::class)
+            dataDir.deleteRecursively()
+            res
+        }
     )
 }

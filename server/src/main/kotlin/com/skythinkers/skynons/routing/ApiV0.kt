@@ -55,7 +55,7 @@ fun Route.apiV0(nonsPath: String) {
                 )
             }
 
-            val baseNames = listOf("cwnd.svg", "packet_reordering.svg", "rate.svg", "rtt.svg")
+            val baseNames = listOf("cwnd.svg", "reordering.svg", "rate.svg", "rtt.svg")
 
             val data =
                     MultiPartFormDataContent(
@@ -69,7 +69,7 @@ fun Route.apiV0(nonsPath: String) {
                                                 append(HttpHeaders.ContentType, "image/svg")
                                                 append(
                                                         HttpHeaders.ContentDisposition,
-                                                        "filename=\"$basename\""
+                                                        "filename=\"${basename.takeUnless { it == "reordering.svg" } ?: "packet_reordering.svg"}\""
                                                 )
                                             }
                                     )

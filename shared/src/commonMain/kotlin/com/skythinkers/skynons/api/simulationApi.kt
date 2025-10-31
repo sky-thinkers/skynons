@@ -16,7 +16,9 @@ sealed interface SimulationApiMessage : ApiMessage
 
 @Serializable
 @SerialName("SimulationResultRequest")
-data object SimulationResultRequest : SimulationApiMessage
+data class SimulationResultRequest(
+    @SerialName("output_dir") val outputDir: String,
+) : SimulationApiMessage
 
 @Serializable
 @SerialName("SimpleSimulationResult")
