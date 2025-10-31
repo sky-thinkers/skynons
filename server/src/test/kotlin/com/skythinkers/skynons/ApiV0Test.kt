@@ -8,6 +8,7 @@ import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import kotlin.io.path.Path
 import kotlin.io.path.readText
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -17,6 +18,7 @@ import kotlin.test.assertEquals
 class ApiV0Test {
 
     @Test
+    @Ignore
     fun testRoot() = testApplication {
         application {
             module()

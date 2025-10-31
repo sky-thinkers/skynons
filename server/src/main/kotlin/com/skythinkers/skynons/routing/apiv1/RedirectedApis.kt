@@ -20,6 +20,7 @@ import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 
 fun Route.addHost(processManager: NonsProcessManager) {
@@ -68,6 +69,7 @@ fun Route.simulate(processManager: NonsProcessManager) {
                     throw SkynonsApiException("Simulation failed")
                 }
             }
+            logger.trace("out dir contents: {}", dataDir.listDirectoryEntries().joinToString())
 
             val res = SimpleSimulationResult(
                 cwnd = readFile("cwnd.svg"),
