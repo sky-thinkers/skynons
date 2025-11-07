@@ -1,0 +1,7 @@
+db:
+  embedded: true
+auth:
+  issuer: "SkyNoNsServer"
+  audience: "SkyNoNsServer"
+  secret: "M5agGxr0Eh7FydJAQGZdhaXxBLIH/WwuBMBYz7D6JpFIlojXeVcaizQxiHnGpbfnlsUAJawk8K6l701lTEB/Gw=="
+  pepper: "FRDi0qt+qknGALKCtWy1NDhCWuYnvA78rvn3WF5d9UiifuDzvMkL4usWzbJhqjO7/gu5pGGQhuhWIQY9mSmarQ=="

@@ -20,6 +20,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
@@ -31,6 +32,7 @@ import kotlin.test.assertEquals
  * Does not test or use backend in any other way.
  */
 class ApiV1Test {
+    private val testConf = ApplicationConfig("test.yaml")
 
     @Test
     fun createSimulation() = test {
@@ -224,6 +226,9 @@ class ApiV1Test {
     }
 
     private inline fun test(crossinline action: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+        environment {
+            config = testConf
+        }
         application {
             module(ProcessManagerMock())
         }
