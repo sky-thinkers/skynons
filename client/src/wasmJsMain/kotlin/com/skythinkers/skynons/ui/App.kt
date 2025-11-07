@@ -20,6 +20,7 @@ import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
 import com.skythinkers.skynons.api.*
 import io.ktor.utils.io.core.*
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 
@@ -30,31 +31,61 @@ fun App() {
         val localContext = LocalPlatformContext.current
         val scope = rememberCoroutineScope()
 
-        //val api = remember(localContext) { SkynonsClientApiImpl() }
-        val api = remember(localContext) { SkynonsClientApiMock() }
+        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl()) }
 
-        var simulationId by remember(localContext) { mutableStateOf<String?>(null) }
+        var simulationId by remember { mutableStateOf<String?>(null) }
 
         var connectionError by remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(api) {
-            val resp = api.createSimulation()
-            val result = resp.resultOrNull()
-            if (result == null) {
+            runCatching {
+                // TODO: check and reuse simulation from window.location.hash
+                val resp = api.createSimulation()
+                val result = resp.resultOrNull()
+                if (result == null) {
+                    connectionError =
+                        "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
+                } else {
+                    window.location.hash = result
+                    simulationId = result
+                }
+            }.onFailure {
                 connectionError =
-                    "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
-            } else {
-                simulationId = result
+                    "Не удалось подключиться к серверу: ${it.message ?: "Неопознанная ошибка"}"
+            }
+        }
+        SideEffect {
+            document.onkeydown = handler@{ event ->
+                if (!event.ctrlKey) return@handler
+                when (event.key) {
+                    "l", "L" -> {
+                        println("local")
+                        simulationId = null
+                        api = SkynonsClientApiMock()
+                    }
+
+                    "e", "E" -> {
+                        simulationId = null
+                        api = SkynonsClientApiImpl()
+                    }
+                }
             }
         }
 
         Column(
-            modifier = Modifier.safeContentPadding()
+            modifier = Modifier.fillMaxSize().safeContentPadding(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (simulationId == null) {
-                Text("Подключение к серверу... $connectionError")
-            } else {
-                GraphRedactor(localContext, scope, api, simulationId!!)
+            val simulationId = simulationId
+            val connectionError = connectionError
+            when {
+                simulationId != null -> GraphRedactor(localContext, scope, api, simulationId)
+                connectionError != null -> Text("Не удалось подключиться к серверу $connectionError")
+                else -> {
+                    Text("Подключение к серверу...")
+                    CircularProgressIndicator()
+                }
             }
         }
     }
@@ -95,12 +126,15 @@ fun GraphRedactor(
 
     Row(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.primaryContainer)
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
         Column(
-            modifier = Modifier.width((screenWidth * 0.4).dp).padding(5.dp),
+            modifier = Modifier.weight(0.4f).padding(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             // Колонки объектов
             Row(
@@ -224,8 +258,9 @@ fun GraphRedactor(
 
         // Графы
         Column(
-            modifier = Modifier.width((screenWidth * 0.6).dp).padding(5.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.weight(0.6f).padding(5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
                 Row {
