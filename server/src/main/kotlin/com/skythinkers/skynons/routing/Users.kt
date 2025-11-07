@@ -64,7 +64,7 @@ fun Route.users(accountManager: AccountManager) {
                     return@post
                 }
 
-            call.respond(EmptyMessage)
+            call.respond(HttpStatusCode.OK)
         }
 
         post("/logout") {
@@ -78,7 +78,7 @@ fun Route.users(accountManager: AccountManager) {
                 }
             call.sessions.clear(UserSession.USER_SESSION)
 
-            call.respond(EmptyMessage)
+            call.respond(HttpStatusCode.OK)
         }
 
         get("/shortInfo") {

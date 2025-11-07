@@ -32,6 +32,6 @@ data class LoginRequest(
 @Serializable
 @SerialName("PasswordUpdateRequest")
 data class PasswordUpdateRequest(
-    val oldPassword: String,
-    val newPassword: String,
+    @SerialName("old_password") val oldPassword: String,
+    @SerialName("new_password") val newPassword: String,
 ) : UserApiMessage
