@@ -34,6 +34,16 @@ interface SkynonsClientApi {
     suspend fun state(simulationId: SimulationId): ApiResult<SimulationState>
 
     suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult>
+
+    suspend fun authenticate(login: String, password: String): ApiResult<ShortUserInfo>
+
+    suspend fun register(login: String, password: String): ApiResult<ShortUserInfo>
+
+    suspend fun updatePassword(oldPassword: String, newPassword: String): ApiResult<Unit>
+
+    suspend fun logout(oldPassword: String, newPassword: String): ApiResult<Unit>
+
+    suspend fun shortUserInfo(oldPassword: String, newPassword: String): ApiResult<ShortUserInfo>
 }
 
 sealed interface ApiResult<out T> {

@@ -2,7 +2,9 @@ package com.skythinkers.skynons.database
 
 import com.skythinkers.skynons.api.ShortUserInfo
 import com.skythinkers.skynons.api.UserId
+import com.skythinkers.skynons.model.user.GeneratedToken
 import com.skythinkers.skynons.model.user.UserCredentials
+import com.skythinkers.skynons.model.user.UserCredentialsRef
 import com.skythinkers.skynons.model.user.UserRegistrationInfo
 import com.skythinkers.skynons.model.user.UserUpdatePasswordInfo
 import io.ktor.util.logging.KtorSimpleLogger
@@ -13,6 +15,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -33,7 +36,7 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
     override suspend fun getUserInfoByUserId(uid: UserId): DatabaseResult<ShortUserInfo> = transaction {
         val user = Users
             .select(Users.uid, Users.login)
-            .where { Users.uid eq uid }
+            .where { (Users.uid eq uid) }
             .map { ShortUserInfo(uid = it[Users.uid], login = it[Users.login]) }
             .singleOrNull()
 
@@ -46,7 +49,7 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
     override suspend fun getUserInfoByLogin(login: String): DatabaseResult<ShortUserInfo> = transaction {
         val user = Users
             .select(Users.uid, Users.login)
-            .where { Users.login eq login }
+            .where { (Users.login eq login) }
             .map { ShortUserInfo(uid = it[Users.uid], login = it[Users.login]) }
             .singleOrNull()
 
@@ -56,26 +59,36 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
         }
     }
 
-    override suspend fun registerUser(info: UserRegistrationInfo): DatabaseResult<ShortUserInfo> = transaction {
+    override suspend fun <T> registerUser(info: UserRegistrationInfo, tokenGenerator: (uid: UserId) -> GeneratedToken<T>): DatabaseResult<Pair<T, ShortUserInfo>> = transaction {
         val uid = Users.insert {
             it[login] = info.login
             it[salt] = info.salt
             it[passwordHash] = info.passwordHash
         }[Users.uid]
 
-        DatabaseResult.Success(ShortUserInfo(uid, info.login))
+        val token = tokenGenerator(uid)
+
+        Sessions.insert {
+            it[Sessions.tokenHash] = token.hash
+            it[Sessions.expirationDate] = token.expiresAt
+            it[Sessions.uid] = uid
+            it[Sessions.credentialsVersion] = 0L
+        }
+
+        DatabaseResult.Success(token.token to ShortUserInfo(uid, info.login))
     }
 
     override suspend fun getUserCredentialsByLogin(login: String): DatabaseResult<UserCredentials> = transaction {
         val info = Users
-            .select(Users.uid, Users.login, Users.salt, Users.passwordHash)
-            .where { Users.login eq login }
+            .select(Users.uid, Users.login, Users.salt, Users.passwordHash, Users.version)
+            .where { (Users.login eq login) }
             .map {
                 UserCredentials(
                     uid = it[Users.uid],
                     login = it[Users.login],
                     salt = it[Users.salt],
-                    passwordHash = it[Users.passwordHash]
+                    passwordHash = it[Users.passwordHash],
+                    version = it[Users.version],
                 )
             }
             .singleOrNull()
@@ -88,14 +101,15 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
 
     override suspend fun getUserCredentialsByUserId(uid: UserId): DatabaseResult<UserCredentials> = transaction {
         val info = Users
-            .select(Users.uid, Users.login, Users.salt, Users.passwordHash)
-            .where { Users.uid eq uid }
+            .select(Users.uid, Users.login, Users.salt, Users.passwordHash, Users.version)
+            .where { (Users.uid eq uid) }
             .map {
                 UserCredentials(
                     uid = it[Users.uid],
                     login = it[Users.login],
                     salt = it[Users.salt],
-                    passwordHash = it[Users.passwordHash]
+                    passwordHash = it[Users.passwordHash],
+                    version = it[Users.version],
                 )
             }
             .singleOrNull()
@@ -110,16 +124,17 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
         val updatedCount = Users
             .update(
                 where = {
-                    Users.uid eq updateInfo.uid
+                    (Users.uid eq updateInfo.uid) and (Users.version eq updateInfo.previousVersion)
                 }
             ) {
 
                 it[Users.salt] = updateInfo.salt
                 it[Users.passwordHash] = updateInfo.passwordHash
+                it[Users.version] = updateInfo.previousVersion + 1
             }
 
         when (updatedCount) {
-            0 -> DatabaseResult.NotFound("No such user uid ${updateInfo.uid}")
+            0 -> DatabaseResult.NotFound("Version mismatch or no such user uid ${updateInfo.uid}")
             else -> DatabaseResult.Success(Unit)
         }
     }
@@ -127,13 +142,25 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
     override suspend fun registerToken(
         tokenHash: ByteArray,
         expirationDate: Instant,
+        forCredentials: UserCredentialsRef,
     ): DatabaseResult<Unit> = transaction {
-        Sessions.insert {
-            it[Sessions.tokenHash] = tokenHash
-            it[Sessions.expirationDate] = expirationDate
-        }
+        val versionMatches = Users.select(Users.uid, Users.version)
+            .where {
+                (Users.uid eq forCredentials.uid) and (Users.version eq forCredentials.version)
+            }.count() == 1L
 
-        DatabaseResult.Success(Unit)
+        if (versionMatches) {
+            Sessions.insert {
+                it[Sessions.tokenHash] = tokenHash
+                it[Sessions.expirationDate] = expirationDate
+                it[Sessions.uid] = forCredentials.uid
+                it[Sessions.credentialsVersion] = forCredentials.version
+            }
+
+            DatabaseResult.Success(Unit)
+        } else {
+            DatabaseResult.NotFound("Version or uid mismatch")
+        }
     }
 
     override suspend fun invalidateToken(tokenHash: ByteArray): DatabaseResult<Unit> = transaction {
@@ -145,16 +172,15 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
         DatabaseResult.Success(Unit)
     }
 
-    override suspend fun getTokenExpirationDate(tokenHash: ByteArray): DatabaseResult<Instant?> = transaction {
-        val expirationDate = Sessions
+    override suspend fun validateToken(tokenHash: ByteArray, now: Instant): DatabaseResult<Boolean> = transaction {
+        val activeTokens = Sessions
             .selectAll()
             .where {
-                Sessions.tokenHash eq tokenHash
+                (Sessions.tokenHash eq tokenHash) and (Sessions.expirationDate greaterEq now)
             }
-            .map { it[Sessions.expirationDate] }
-            .singleOrNull()
+            .count()
 
-        DatabaseResult.Success(expirationDate)
+        DatabaseResult.Success(activeTokens == 1L)
     }
 
     override suspend fun removeExpiredTokens(byDate: Instant): DatabaseResult<Unit> = transaction {

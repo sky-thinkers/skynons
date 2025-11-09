@@ -14,6 +14,7 @@ object Users : Table() {
     val login = varchar("login", length = 50).uniqueIndex(Constraint.UNIQUE_USERS_LOGIN.name)
     val salt = binary("salt", length = HASH_LENGTH)
     val passwordHash = binary("passwordHash", length = HASH_LENGTH)
+    val version = long("version").default(0L)
 
     override val primaryKey = PrimaryKey(uid)
 }
@@ -21,6 +22,8 @@ object Users : Table() {
 object Sessions : Table() {
     val tokenHash = binary("tokenHash", HASH_LENGTH)
     val expirationDate = timestamp("expirationDate")
+    val uid = long("uid")
+    val credentialsVersion = long("credentialsVersion")
 
     override val primaryKey = PrimaryKey(tokenHash)
 }

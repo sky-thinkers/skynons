@@ -11,9 +11,12 @@ import com.skythinkers.skynons.api.UserId
 import com.skythinkers.skynons.database.DatabaseException
 import com.skythinkers.skynons.database.DatabaseResult
 import com.skythinkers.skynons.database.asResult
+import com.skythinkers.skynons.model.user.GeneratedToken
 import com.skythinkers.skynons.model.user.UserCredentials
+import com.skythinkers.skynons.model.user.UserCredentialsRef
 import com.skythinkers.skynons.model.user.UserRegistrationInfo
 import com.skythinkers.skynons.model.user.UserUpdatePasswordInfo
+import com.skythinkers.skynons.model.user.toRef
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -58,9 +61,8 @@ class AccountManagerImpl(
 
         return if (checkPassword(credentials, loginRequest.password)) {
             logger.debug("Successfully authenticated `${loginRequest.login}`")
-            // TODO(firelion9): multiple transactions
-            createAndRegisterToken(credentials.uid).map {
-                ShortUserInfo(credentials.uid, credentials.login) to UserSession(it)
+            createAndRegisterToken(credentials.toRef()).map {
+                ShortUserInfo(credentials.uid, credentials.login) to it
             }
         } else {
             logger.debug("Failed to authenticate `${loginRequest.login}`")
@@ -76,8 +78,13 @@ class AccountManagerImpl(
             salt = salt,
             passwordHash = passwordHash,
         )
-        val userInfo = when (val cRes = authConfig.credentialsDatabase.registerUser(registrationInfo)) {
-            is DatabaseResult.Success -> cRes.res
+        val (token, userInfo) = when (val cRes =
+            authConfig.credentialsDatabase.registerUser(registrationInfo, this::generateToken)) {
+            is DatabaseResult.Success -> {
+                logger.info("Successfully registered user `${registrationInfo.login}")
+                cRes.res
+            }
+
             !is DatabaseResult.Error -> throw AssertionError("Unreachable code")
             is DatabaseResult.ConstraintViolation -> {
                 logger.debug("Failed to register `${registrationRequest.login}`", DatabaseException(cRes))
@@ -90,10 +97,7 @@ class AccountManagerImpl(
             }
         }
 
-        logger.info("Successfully registered user `${registrationInfo.login}")
-        return createAndRegisterToken(userInfo.uid).map {
-            userInfo to UserSession(it)
-        }
+        return Result.success(userInfo to token)
     }
 
     override suspend fun updateUserPassword(
@@ -109,12 +113,12 @@ class AccountManagerImpl(
         return if (checkPassword(credentials, updateRequest.oldPassword)) {
             logger.debug("Changing password for `$userId`")
             val (salt, passwordHash) = saltAndHash(updateRequest.newPassword)
-            // TODO(firelion9):  multiple transactions
             when (val cRes = authConfig.credentialsDatabase.updateUserPassword(
                 UserUpdatePasswordInfo(
                     uid = userId,
                     salt = salt,
                     passwordHash = passwordHash,
+                    previousVersion = credentials.version,
                 )
             )) {
 
@@ -137,13 +141,13 @@ class AccountManagerImpl(
             return Result.success(false)
         }
 
-        val expirationDate = authConfig.credentialsDatabase.getTokenExpirationDate(hashToken(session.token))
+        val isValid = authConfig.credentialsDatabase.validateToken(hashToken(session.token))
             .asResult().getOrElse {
-                logger.debug("Failed to get session expiration date for uid ${session.uid}, token ${session.token}", it)
+                logger.debug("Failed to validate token for uid ${session.uid}", it)
                 return Result.failure(AccountException("Internal error", it))
-            } ?: return Result.success(false)
+            }
 
-        return Result.success(Clock.System.now() <= expirationDate)
+        return Result.success(isValid)
     }
 
     override suspend fun invalidateSession(session: UserSession): Result<Unit> {
@@ -201,16 +205,23 @@ class AccountManagerImpl(
         }
     }
 
-    private suspend fun createAndRegisterToken(uid: UserId): Result<String> {
+    private suspend fun createAndRegisterToken(forCredentials: UserCredentialsRef): Result<UserSession> {
+        val tokenInfo = generateToken(forCredentials.uid)
+        return authConfig.credentialsDatabase.registerToken(tokenInfo.hash, tokenInfo.expiresAt, forCredentials)
+            .asResult()
+            .map { tokenInfo.token }
+    }
+
+    private fun generateToken(uid: UserId): GeneratedToken<UserSession> {
         val expiresAt = Clock.System.now() + authConfig.tokenValidityPeriod
         return JWT.create().withAudience(authConfig.audience).withIssuer(authConfig.issuer)
             .withClaim(UserSession.USER_ID_CLAIM_NAME, uid)
+            .withClaim("nonce", secureRandom.nextLong())
             .withExpiresAt(expiresAt.toJavaInstant())
             .sign(signAlgorithm)
             .let { token ->
                 val hash = hashToken(token)
-                authConfig.credentialsDatabase.registerToken(hash, expiresAt).asResult()
-                    .map { token }
+                GeneratedToken(UserSession(token), hash, expiresAt)
             }
     }
 

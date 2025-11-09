@@ -99,7 +99,7 @@ class SkynonsClientApiImpl(
     override suspend fun addSwitch(
         simulationId: SimulationId,
         name: ObjectId,
-    ): ApiResult<Unit>  {
+    ): ApiResult<Unit> {
         val response = httpClient.post(apiAddress + addSwitchEndpoint(simulationId)) {
             setBody(Switch(name))
             contentType(ContentType.Application.Json)
@@ -109,20 +109,23 @@ class SkynonsClientApiImpl(
             ApiResult.Success(Unit)
         }
     }
+
     override suspend fun addLink(
         simulationId: SimulationId,
         name: ObjectId,
         fromId: ObjectId,
         toId: ObjectId,
         speed: SpeedString,
-    ): ApiResult<Unit>  {
+    ): ApiResult<Unit> {
         val response = httpClient.post(apiAddress + addLinkEndpoint(simulationId)) {
-            setBody(Link(
-                name,
-                fromId,
-                toId,
-                speed,
-            ))
+            setBody(
+                Link(
+                    name,
+                    fromId,
+                    toId,
+                    speed,
+                )
+            )
             contentType(ContentType.Application.Json)
         }
 
@@ -137,14 +140,16 @@ class SkynonsClientApiImpl(
         senderId: ObjectId,
         receiverId: ObjectId,
         sizeToSend: SizeString,
-    ): ApiResult<Unit>  {
+    ): ApiResult<Unit> {
         val response = httpClient.post(apiAddress + addConnectionEndpoint(simulationId)) {
-            setBody(Connection(
-                name,
-                senderId,
-                receiverId,
-                sizeToSend,
-            ))
+            setBody(
+                Connection(
+                    name,
+                    senderId,
+                    receiverId,
+                    sizeToSend,
+                )
+            )
             contentType(ContentType.Application.Json)
         }
 
@@ -159,8 +164,10 @@ class SkynonsClientApiImpl(
             contentType(ContentType.Application.Json)
         }
         return handleResponseDefault(response) {
-            //TODO("Return list of objects to remove")
-            ApiResult.Success(emptyList())
+            val response = runCatching { response.body<RemovedObjectList>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response.ids)
         }
     }
 
@@ -186,6 +193,79 @@ class SkynonsClientApiImpl(
         }
     }
 
+    override suspend fun authenticate(
+        login: String,
+        password: String,
+    ): ApiResult<ShortUserInfo> {
+        val response = httpClient.post(apiAddress + AUTHENTICATE_ENDPOINT) {
+            setBody(LoginRequest(login = login, password = password))
+            contentType(ContentType.Application.Json)
+        }
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<ShortUserInfo>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response)
+        }
+    }
+
+    override suspend fun register(
+        login: String,
+        password: String,
+    ): ApiResult<ShortUserInfo> {
+        val response = httpClient.post(apiAddress + REGISTER_ENDPOINT) {
+            setBody(RegistrationRequest(login = login, password = password))
+            contentType(ContentType.Application.Json)
+        }
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<ShortUserInfo>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response)
+        }
+    }
+
+    override suspend fun updatePassword(
+        oldPassword: String,
+        newPassword: String,
+    ): ApiResult<Unit> {
+        val response = httpClient.post(apiAddress + UPDATE_PASSWORD_ENDPOINT) {
+            setBody(PasswordUpdateRequest(oldPassword = oldPassword, newPassword = newPassword))
+            contentType(ContentType.Application.Json)
+        }
+
+        return handleResponseDefault(response) {
+            ApiResult.Success(Unit)
+        }
+    }
+
+    override suspend fun logout(
+        oldPassword: String,
+        newPassword: String,
+    ): ApiResult<Unit> {
+        val response = httpClient.post(apiAddress + LOGOUT_ENDPOINT)
+
+        return handleResponseDefault(response) {
+            ApiResult.Success(Unit)
+        }
+    }
+
+    override suspend fun shortUserInfo(
+        oldPassword: String,
+        newPassword: String,
+    ): ApiResult<ShortUserInfo> {
+        val response = httpClient.post(apiAddress + SHORT_INFO_ENDPOINT)
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<ShortUserInfo>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response)
+        }
+    }
+
     private suspend inline fun <R> handleResponseDefault(
         response: HttpResponse,
         onOk: () -> ApiResult<R>,
@@ -203,10 +283,19 @@ class SkynonsClientApiImpl(
 
     companion object {
         private const val LOCAL_API_ADDRESS = "http://localhost:8090"
+
         private const val API_V0_PREFIX = "/api/v0"
-        private const val API_V1_PREFIX = "/api/v1"
         private const val SIMULATE_V0_ENDPOINT = "$API_V0_PREFIX/simulate"
+
+        private const val API_V1_PREFIX = "/api/v1"
         private const val CREATE_SIMULATION_ENDPOINT = "$API_V1_PREFIX/create_simulation"
+
+        private const val API_V1_USERS_PREFIX = "$API_V1_PREFIX/users"
+        private const val AUTHENTICATE_ENDPOINT = "$API_V1_USERS_PREFIX/authenticate"
+        private const val REGISTER_ENDPOINT = "$API_V1_USERS_PREFIX/register"
+        private const val UPDATE_PASSWORD_ENDPOINT = "$API_V1_USERS_PREFIX/updatePassword"
+        private const val LOGOUT_ENDPOINT = "$API_V1_USERS_PREFIX/logout"
+        private const val SHORT_INFO_ENDPOINT = "$API_V1_USERS_PREFIX/shortInfo"
 
         private fun addHostEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_host"
         private fun addSwitchEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_switch"
