@@ -59,7 +59,10 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
         }
     }
 
-    override suspend fun <T> registerUser(info: UserRegistrationInfo, tokenGenerator: (uid: UserId) -> GeneratedToken<T>): DatabaseResult<Pair<T, ShortUserInfo>> = transaction {
+    override suspend fun <T> registerUser(
+        info: UserRegistrationInfo,
+        tokenGenerator: (uid: UserId) -> GeneratedToken<T>,
+    ): DatabaseResult<Pair<T, ShortUserInfo>> = transaction {
         val uid = Users.insert {
             it[login] = info.login
             it[salt] = info.salt

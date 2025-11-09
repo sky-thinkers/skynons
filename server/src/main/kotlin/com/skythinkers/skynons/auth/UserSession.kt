@@ -12,5 +12,6 @@ data class UserSession(val token: String) {
     }
 }
 
-val UserSession.uid: UserId get() = JWT.decode(token).getClaim(UserSession.USER_ID_CLAIM_NAME).asLong()
-    ?: throw SecurityException("Cannot decode user id from token")
+val UserSession.uid: UserId
+    get() = JWT.decode(token).getClaim(UserSession.USER_ID_CLAIM_NAME).asLong()
+        ?: throw SecurityException("Cannot decode user id from token")

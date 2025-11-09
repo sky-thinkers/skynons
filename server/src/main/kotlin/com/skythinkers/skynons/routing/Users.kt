@@ -1,6 +1,5 @@
 package com.skythinkers.skynons.routing
 
-import com.skythinkers.skynons.api.EmptyMessage
 import com.skythinkers.skynons.api.ErrorResponseData
 import com.skythinkers.skynons.api.LoginRequest
 import com.skythinkers.skynons.api.PasswordUpdateRequest
