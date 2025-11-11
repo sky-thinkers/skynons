@@ -1,7 +1,7 @@
 package com.skythinkers.skynons.database
 
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.datetime.timestamp
 
 private const val HASH_LENGTH: Int = 32
 
@@ -22,8 +22,28 @@ object Users : Table() {
 object Sessions : Table() {
     val tokenHash = binary("tokenHash", HASH_LENGTH)
     val expirationDate = timestamp("expirationDate")
-    val uid = long("uid")
+    val uid = long("uid").references(Users.uid)
     val credentialsVersion = long("credentialsVersion")
 
     override val primaryKey = PrimaryKey(tokenHash)
+}
+
+object SimulationHistory : Table() {
+    val id = long("id").autoIncrement()
+    val owner = long("owner").references(Users.uid)
+    val date = timestamp("date")
+    val configHash = binary("tokenHash", HASH_LENGTH)
+    val resultsHash = binary("resultsHash", HASH_LENGTH)
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object BlobRefs : Table() {
+    val blobHash = binary("blobHash", HASH_LENGTH)
+    val owner = long("owner").references(Users.uid)
+    val created = timestamp("created")
+    val modified = timestamp("modified")
+    val accessed = timestamp("accessed")
+
+    override val primaryKey = PrimaryKey(blobHash, owner)
 }

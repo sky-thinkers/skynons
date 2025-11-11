@@ -20,7 +20,7 @@ import io.ktor.utils.io.readBuffer
 import io.ktor.utils.io.readText
 
 class SkynonsClientApiImpl(
-    private val apiAddress: String = LOCAL_API_ADDRESS,
+    private val apiAddress: String = "",
     private val httpClient: HttpClient = HttpClient(Js) {
         install(ContentNegotiation) {
             json()

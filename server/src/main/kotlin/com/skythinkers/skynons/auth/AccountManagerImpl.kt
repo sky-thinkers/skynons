@@ -21,11 +21,10 @@ import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.datetime.Clock
-import kotlinx.datetime.toJavaInstant
 import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.toJavaInstant
 
 class AccountManagerImpl(
     private val authConfig: AuthConfig,
@@ -213,7 +212,7 @@ class AccountManagerImpl(
     }
 
     private fun generateToken(uid: UserId): GeneratedToken<UserSession> {
-        val expiresAt = Clock.System.now() + authConfig.tokenValidityPeriod
+        val expiresAt = kotlin.time.Clock.System.now() + authConfig.tokenValidityPeriod
         return JWT.create().withAudience(authConfig.audience).withIssuer(authConfig.issuer)
             .withClaim(UserSession.USER_ID_CLAIM_NAME, uid)
             .withClaim("nonce", secureRandom.nextLong())

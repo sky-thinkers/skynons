@@ -2,7 +2,7 @@ package com.skythinkers.skynons.database
 
 import io.ktor.server.application.Application
 import io.ktor.server.application.log
-import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.v1.jdbc.Database
 
 fun Application.openDatabase(): DatabaseConnection {
     val embedded = environment.config.property("db.embedded").getString().toBooleanStrictOrNull() ?: true

@@ -13,9 +13,9 @@ import io.ktor.test.dispatcher.testSuspend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.deleteAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,8 +45,8 @@ class AccountManagerTest {
     @BeforeTest
     fun clearDatabase() {
         transaction(db) {
-            Users.deleteAll()
             Sessions.deleteAll()
+            Users.deleteAll()
         }
     }
 
