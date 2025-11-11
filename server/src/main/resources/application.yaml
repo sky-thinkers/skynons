@@ -5,3 +5,13 @@ ktor:
   deployment:
     port: ${SERVER_PORT:8090}
     host: ${SERVER_HOST:localhost}
+db:
+  embedded: ${DB_EMBEDDED:true}
+  url: ${DB_URL:""}
+  user: ${DB_USER:""}
+  password: ${DB_PASSWORD:""}
+auth:
+  issuer: "SkyNoNsServer"
+  audience: "SkyNoNsServer"
+  secret: ${AUTH_SECRET:"IA=="}
+  pepper: ${AUTH_PEPPER:"IA=="}

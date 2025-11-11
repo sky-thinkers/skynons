@@ -212,4 +212,29 @@ class SkynonsClientApiMock : SkynonsClientApi {
             ApiResult.ServerError(e.message ?: "Unrecognized exception")
         }
     }
+
+    override suspend fun authenticate(
+        login: String,
+        password: String,
+    ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun register(
+        login: String,
+        password: String,
+    ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun updatePassword(
+        oldPassword: String,
+        newPassword: String,
+    ): ApiResult<Unit> = ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun logout(
+        oldPassword: String,
+        newPassword: String,
+    ): ApiResult<Unit> = ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun shortUserInfo(
+        oldPassword: String,
+        newPassword: String,
+    ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
 }

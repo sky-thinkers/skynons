@@ -38,6 +38,8 @@ services:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=${SERVER_PORT}
       - DB_EMBEDDED=false
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_PEPPER=${AUTH_PEPPER}
 
   db:
     image: postgres:16.1
