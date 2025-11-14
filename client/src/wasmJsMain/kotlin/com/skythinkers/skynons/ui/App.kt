@@ -31,7 +31,7 @@ fun App() {
         val localContext = LocalPlatformContext.current
         val scope = rememberCoroutineScope()
 
-        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl()) }
+        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl("")) }
 
         var simulationId by remember { mutableStateOf<String?>(null) }
 
@@ -66,7 +66,7 @@ fun App() {
 
                     "e", "E" -> {
                         simulationId = null
-                        api = SkynonsClientApiImpl()
+                        api = SkynonsClientApiImpl("")
                     }
                 }
             }
