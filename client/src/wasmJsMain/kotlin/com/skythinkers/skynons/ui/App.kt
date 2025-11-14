@@ -68,6 +68,11 @@ fun App() {
                         simulationId = null
                         api = SkynonsClientApiImpl("")
                     }
+
+                    "d", "D" -> {
+                        simulationId = null
+                        api = SkynonsClientApiImpl()
+                    }
                 }
             }
         }

@@ -44,6 +44,10 @@ interface SkynonsClientApi {
     suspend fun logout(oldPassword: String, newPassword: String): ApiResult<Unit>
 
     suspend fun shortUserInfo(oldPassword: String, newPassword: String): ApiResult<ShortUserInfo>
+
+    suspend fun listHistory(beforeEntryId: HistoryEntryId? = null, limit: Int? = null): ApiResult<HistoryEntryList>
+
+    suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry>
 }
 
 sealed interface ApiResult<out T> {
