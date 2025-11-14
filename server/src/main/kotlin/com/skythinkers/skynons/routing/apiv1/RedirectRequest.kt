@@ -9,6 +9,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingCall
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
@@ -20,7 +21,9 @@ inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBody
     processManager: NonsProcessManager,
     methodName: String,
     crossinline requestBodyReplacement: () -> RequestBodyType? = { null },
-    crossinline responseBodyReplacement: (request: RequestBodyType) -> ResponseBodyType = { error("No response replacement") },
+    crossinline responseBodyReplacement: (call: RoutingCall, request: RequestBodyType) -> ResponseBodyType = { _, _ ->
+        error("No response replacement")
+    },
     logger: Logger = KtorSimpleLogger("API_V1/post/$methodName"),
 ) {
     post("{id}/$methodName") {
@@ -37,7 +40,9 @@ inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBody
     processManager: NonsProcessManager,
     methodName: String,
     crossinline requestBodyReplacement: () -> RequestBodyType? = { null },
-    crossinline responseBodyReplacement: (request: RequestBodyType) -> ResponseBodyType = { error("No response replacement") },
+    crossinline responseBodyReplacement: (call: RoutingCall, request: RequestBodyType) -> ResponseBodyType = { _, _ ->
+        error("No response replacement")
+    },
     logger: Logger = KtorSimpleLogger("API_V1/get/$methodName"),
 ) {
     get("{id}/$methodName") {
@@ -54,7 +59,9 @@ inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBody
     processManager: NonsProcessManager,
     methodName: String,
     crossinline requestBodyReplacement: () -> RequestBodyType? = { null },
-    crossinline responseBodyReplacement: (request: RequestBodyType) -> ResponseBodyType = { error("No response replacement") },
+    crossinline responseBodyReplacement: (call: RoutingCall, request: RequestBodyType) -> ResponseBodyType = { _, _ ->
+        error("No response replacement")
+    },
     logger: Logger = KtorSimpleLogger("API_V1/delete/$methodName"),
 ) {
     delete("{id}/$methodName") {
@@ -70,7 +77,7 @@ inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBody
 suspend inline fun <reified RequestBodyType : SimulationApiMessage, reified ResponseBodyType : SimulationApiMessage> RoutingContext.redirectSimulationRequestHandler(
     processManager: NonsProcessManager,
     requestBodyReplacement: () -> RequestBodyType?,
-    responseBodyReplacement: (request: RequestBodyType) -> ResponseBodyType,
+    responseBodyReplacement: suspend (call: RoutingCall, request: RequestBodyType) -> ResponseBodyType,
     logger: Logger,
 ) {
     try {
@@ -99,7 +106,7 @@ suspend inline fun <reified RequestBodyType : SimulationApiMessage, reified Resp
         when (val response = processManager.message(processId, requestBody)) {
             !is ResponseBodyType if response is EmptyMessage -> {
                 logger.trace("Using response replacement")
-                val replacement = responseBodyReplacement(requestBody)
+                val replacement = responseBodyReplacement(call, requestBody)
                 call.respond(replacement)
             }
 

@@ -6,6 +6,7 @@ import com.skythinkers.skynons.auth.AccountManager
 import com.skythinkers.skynons.auth.AccountManagerImpl
 import com.skythinkers.skynons.auth.AuthConfig
 import com.skythinkers.skynons.database.BlobRefs
+import com.skythinkers.skynons.database.Blobs
 import com.skythinkers.skynons.database.DatabaseConnection
 import com.skythinkers.skynons.database.Sessions
 import com.skythinkers.skynons.database.Users
@@ -59,6 +60,7 @@ class BlobStorageTest {
     fun clearDatabase() {
         transaction<Unit>(db) {
             BlobRefs.deleteAll()
+            Blobs.deleteAll()
             Sessions.deleteAll()
             Users.deleteAll()
         }

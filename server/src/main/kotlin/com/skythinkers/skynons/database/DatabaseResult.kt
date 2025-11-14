@@ -25,8 +25,10 @@ sealed interface DatabaseResult<out T> {
 
 fun <T> DatabaseResult<T>.asResult(): Result<T> = when (this) {
     is Success<T> -> Result.success(res)
-    is DatabaseResult.Error -> Result.failure(DatabaseException(this))
+    is DatabaseResult.Error -> Result.failure(asException())
 }
+
+fun DatabaseResult.Error.asException(): DatabaseException = DatabaseException(this)
 
 val <T> DatabaseResult<T>.isSuccess: Boolean
     get() = when (this) {

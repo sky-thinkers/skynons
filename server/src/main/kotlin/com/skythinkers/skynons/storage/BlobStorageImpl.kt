@@ -20,7 +20,7 @@ class BlobStorageImpl(
     private val storePath: Path,
     private val database: SkynonsDatabase,
 ) : BlobStorage {
-    private val logger = KtorSimpleLogger("AccountManagerImpl")
+    private val logger = KtorSimpleLogger("BlobStorageImpl")
 
     private val digestThreadLocal = ThreadLocal.withInitial {
         MessageDigest.getInstance(HASHING_ALGORITHM)
@@ -89,6 +89,13 @@ class BlobStorageImpl(
             return Result.failure(e)
         }
 
+        database.touchBlob(hash).asResult()
+            .getOrElse {
+                val e = BlobStorageException("Failed to touch blob", it)
+                logger.error("writeFile failed", e)
+                return Result.failure(e)
+            }
+
         val targetPath = resolveStorage(hash)
         runCatching {
             if (!targetPath.exists()) {
@@ -125,6 +132,13 @@ class BlobStorageImpl(
             update(data)
             digest().toHexString()
         }
+
+        database.touchBlob(hash).asResult()
+            .getOrElse {
+                val e = BlobStorageException("Failed to touch blob", it)
+                logger.error("writeData failed", e)
+                return Result.failure(e)
+            }
 
         val targetPath = resolveStorage(hash)
         runCatching {

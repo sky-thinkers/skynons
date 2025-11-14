@@ -11,9 +11,14 @@ import com.skythinkers.skynons.api.SimulationResultRequest
 import com.skythinkers.skynons.api.SimulationState
 import com.skythinkers.skynons.api.SimulationStateRequest
 import com.skythinkers.skynons.api.Switch
+import com.skythinkers.skynons.auth.UserSession
+import com.skythinkers.skynons.auth.uid
+import com.skythinkers.skynons.history.HistoryManager
 import com.skythinkers.skynons.nons.NonsProcessManager
+import io.ktor.server.auth.principal
 import io.ktor.server.routing.Route
 import io.ktor.util.logging.KtorSimpleLogger
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
@@ -50,7 +55,10 @@ fun Route.removeObject(processManager: NonsProcessManager) {
     redirectSimulationDeleteRequest<RemoveObject, RemovedObjectList>(processManager, "remove_object")
 }
 
-fun Route.simulate(processManager: NonsProcessManager) {
+fun Route.simulate(
+    processManager: NonsProcessManager,
+    historyManager: HistoryManager,
+) {
     val logger = KtorSimpleLogger("API/V1/simulate")
     redirectSimulationPostRequest<SimulationResultRequest, SimpleSimulationResult>(
         processManager,
@@ -60,7 +68,8 @@ fun Route.simulate(processManager: NonsProcessManager) {
             val tempDir = Files.createTempDirectory("simulation-output")
             SimulationResultRequest(tempDir.absolutePathString())
         },
-        responseBodyReplacement = { request ->
+        responseBodyReplacement = { call, request ->
+            val session = call.principal<UserSession>(UserSession.USER_SESSION)
             val dataDir = Path(request.outputDir)
             fun readFile(subPath: String) = dataDir.resolve(subPath).let {
                 if (it.isRegularFile()) it.readText()
@@ -77,6 +86,18 @@ fun Route.simulate(processManager: NonsProcessManager) {
                 rate = readFile("rate.svg"),
                 rtt = readFile("rtt.svg"),
             )
+            if (session != null) {
+                val config = "NOT IMPLEMENTED" // TODO(firelion)|TODO(PaulRalnikov): replace with config read
+
+                // TODO(firelion): Investigate: adding suspend to responseBodyReplacement lambda causes compiler crash.
+                //                 Reasons are unclear, so we temporary run this suspend call in runBlocking
+                runBlocking {
+                    historyManager.storeEntry(session.uid, config, res)
+                        .onFailure {
+                            logger.warn("Failed to store history entry", it)
+                        }
+                }
+            }
             @OptIn(ExperimentalPathApi::class)
             dataDir.deleteRecursively()
             res
