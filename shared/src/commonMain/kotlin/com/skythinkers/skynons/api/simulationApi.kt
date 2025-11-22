@@ -94,3 +94,15 @@ data class SimulationState(
     val connections: List<Connection>,
     val result: SimpleSimulationResult? = null,
 ) : SimulationApiMessage
+
+@Serializable
+@SerialName("SaveSimulationRequest")
+data class SaveSimulationRequest(
+    @SerialName("output_dir") val outputDir: String,
+) : SimulationApiMessage
+
+@Serializable
+@SerialName("RestoreSimulationRequest")
+data class RestoreSimulationRequest(
+    @SerialName("config_path") val configPath: String,
+) : SimulationApiMessage

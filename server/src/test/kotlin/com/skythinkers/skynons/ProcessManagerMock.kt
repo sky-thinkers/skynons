@@ -8,6 +8,8 @@ import com.skythinkers.skynons.api.Host
 import com.skythinkers.skynons.api.Link
 import com.skythinkers.skynons.api.RemoveObject
 import com.skythinkers.skynons.api.RemovedObjectList
+import com.skythinkers.skynons.api.RestoreSimulationRequest
+import com.skythinkers.skynons.api.SaveSimulationRequest
 import com.skythinkers.skynons.api.SimpleSimulationResult
 import com.skythinkers.skynons.api.SimulationApiMessage
 import com.skythinkers.skynons.api.SimulationResultRequest
@@ -122,6 +124,10 @@ class ProcessManagerMock : NonsProcessManager {
                         links = links.values.toList(),
                         connections = connections.values.toList(),
                     )
+                }
+
+                is SaveSimulationRequest, is RestoreSimulationRequest -> {
+                    ErrorResponseData("Save/restore are unsupported in mock")
                 }
 
                 is CreateSimulationResponseData, EmptyMessage, is ErrorResponseData, is SimpleSimulationResult, is SimulationState, is RemovedObjectList -> {
