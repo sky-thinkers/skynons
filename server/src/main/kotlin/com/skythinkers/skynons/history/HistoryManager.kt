@@ -4,8 +4,11 @@ import com.skythinkers.skynons.api.HistoryEntry
 import com.skythinkers.skynons.api.HistoryEntryId
 import com.skythinkers.skynons.api.SimpleSimulationResult
 import com.skythinkers.skynons.api.UserId
+import java.lang.Exception
 import kotlin.time.Clock
 import kotlin.time.Instant
+
+class HistoryEntryNotFoundException(msg: String, cause: Throwable) : Exception(msg, cause)
 
 interface HistoryManager {
     suspend fun storeEntry(

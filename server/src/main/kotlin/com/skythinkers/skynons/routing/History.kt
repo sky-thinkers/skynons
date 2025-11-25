@@ -4,6 +4,7 @@ import com.skythinkers.skynons.api.ErrorResponseData
 import com.skythinkers.skynons.api.HistoryEntryList
 import com.skythinkers.skynons.auth.UserSession
 import com.skythinkers.skynons.auth.uid
+import com.skythinkers.skynons.history.HistoryEntryNotFoundException
 import com.skythinkers.skynons.history.HistoryManager
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -12,8 +13,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.sessions.sessions
 import io.ktor.util.logging.KtorSimpleLogger
 import io.ktor.util.logging.Logger
 
@@ -86,7 +85,7 @@ private suspend inline fun RoutingContext.handleHistoryError(
     ret: () -> Nothing,
 ): Nothing {
     when (e) {
-        is NoSuchElementException -> {
+        is HistoryEntryNotFoundException -> {
             call.respond(
                 HttpStatusCode.BadRequest,
                 ErrorResponseData("No such element")

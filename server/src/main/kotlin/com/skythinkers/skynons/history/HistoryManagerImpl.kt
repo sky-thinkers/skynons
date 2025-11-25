@@ -56,7 +56,7 @@ class HistoryManagerImpl(
         return when (val res = database.listHistoryLastEntries(owner, limit)) {
             is DatabaseResult.Success<List<ExtractedHistoryEntryData>> -> mapExtractedData(owner, res.res)
             !is DatabaseResult.Error -> throw AssertionError("unreachable")
-            is DatabaseResult.NotFound -> Result.failure(NoSuchElementException("No such entry", res.asException()))
+            is DatabaseResult.NotFound -> Result.failure(HistoryEntryNotFoundException("No such entry", res.asException()))
             else -> errorRes("Unknown error", res.asException())
         }
     }
@@ -69,7 +69,7 @@ class HistoryManagerImpl(
         return when (val res = database.listHistoryBeforeEntryId(owner, beforeId, limit)) {
             is DatabaseResult.Success<List<ExtractedHistoryEntryData>> -> mapExtractedData(owner, res.res)
             !is DatabaseResult.Error -> throw AssertionError("unreachable")
-            is DatabaseResult.NotFound -> Result.failure(NoSuchElementException("No such entry", res.asException()))
+            is DatabaseResult.NotFound -> Result.failure(HistoryEntryNotFoundException("No such entry", res.asException()))
             else -> errorRes("Unknown error", res.asException())
         }
     }
@@ -78,7 +78,7 @@ class HistoryManagerImpl(
         return when (val res = database.getHistoryEntryById(owner, id)) {
             is DatabaseResult.Success<ExtractedHistoryEntryData> -> mapExtractedData(owner, res.res)
             !is DatabaseResult.Error -> throw AssertionError("unreachable")
-            is DatabaseResult.NotFound -> Result.failure(NoSuchElementException("No such entry", res.asException()))
+            is DatabaseResult.NotFound -> Result.failure(HistoryEntryNotFoundException("No such entry", res.asException()))
             else -> errorRes("Unknown error", res.asException())
         }
     }
