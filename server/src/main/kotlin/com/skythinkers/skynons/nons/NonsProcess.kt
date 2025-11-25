@@ -22,6 +22,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class NonsProcess(
     val processId: ProcessId,
@@ -32,6 +34,7 @@ class NonsProcess(
 ) {
     private val stopSemaphore: Semaphore = Semaphore(1, 1)
     private val messageQueue = Channel<Msg>(Channel.BUFFERED)
+    @Volatile private var lastActivity = Clock.System.now()
 
     private var job: Job = scope.launch {
         runCatching {
@@ -40,6 +43,7 @@ class NonsProcess(
                     log.trace("enter websocket loop")
                     while (!stopSemaphore.tryAcquire() && isActive) {
                         val msgRes = messageQueue.receiveCatching()
+                        lastActivity = Clock.System.now()
                         if (msgRes.isFailure || stopSemaphore.tryAcquire() || !isActive) break
                         val msg = msgRes.getOrNull() ?: break
                         log.trace("Passing message of type {}", msg.msg::class.java.name)
@@ -82,6 +86,15 @@ class NonsProcess(
     }
 
     fun isRunning() = job.isActive
+
+    fun stopIfTooOld(minPermittedLastActivityTimestamp: Instant): Boolean {
+        return if (lastActivity < minPermittedLastActivityTimestamp) {
+            stop()
+            true
+        } else {
+            false
+        }
+    }
 
     fun stop() {
         runCatching { stopSemaphore.release() }.onFailure { return }
