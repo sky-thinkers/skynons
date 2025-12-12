@@ -79,6 +79,11 @@ class NonsProcessManagerImpl(private val nonsPath: String, private val scope: Co
         scope.cancel()
     }
 
+    override fun killProcess(id: ProcessId) {
+        val process = processIdToNonsProcess.remove(id)
+        process?.stop()
+    }
+
     companion object {
         private val log = KtorSimpleLogger("NonsProcessManager")
     }

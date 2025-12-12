@@ -13,6 +13,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.util.logging.KtorSimpleLogger
 import io.ktor.util.logging.Logger
 
@@ -79,7 +80,7 @@ private suspend inline fun RoutingContext.limit(ret: () -> Nothing): Int {
     } ?: HistoryManager.DEFAULT_LIMIT
 }
 
-private suspend inline fun RoutingContext.handleHistoryError(
+suspend inline fun RoutingContext.handleHistoryError(
     logger: Logger,
     e: Throwable,
     ret: () -> Nothing,

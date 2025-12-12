@@ -9,6 +9,8 @@ fun Route.apiV1(
     historyManager: HistoryManager,
 ) {
     createSimulation(processManager)
+    createSimulationWithConfig(processManager)
+    restoreFromHistory(processManager, historyManager)
     addHost(processManager)
     addSwitch(processManager)
     addLink(processManager)

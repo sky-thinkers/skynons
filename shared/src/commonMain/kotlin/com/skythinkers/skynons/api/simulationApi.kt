@@ -46,6 +46,12 @@ data class RemovedObjectList(
 ) : SimulationApiMessage
 
 @Serializable
+@SerialName("CreateSimulationWithConfigRequest")
+data class CreateSimulationWithConfigRequest(
+    val config: String,
+) : SimulationApiMessage
+
+@Serializable
 @SerialName("CreateSimulationResponseData")
 data class CreateSimulationResponseData(
     val id: SimulationId,
@@ -98,7 +104,7 @@ data class SimulationState(
 @Serializable
 @SerialName("SaveSimulationRequest")
 data class SaveSimulationRequest(
-    @SerialName("output_dir") val outputDir: String,
+    @SerialName("output_path") val outputPath: String,
 ) : SimulationApiMessage
 
 @Serializable
