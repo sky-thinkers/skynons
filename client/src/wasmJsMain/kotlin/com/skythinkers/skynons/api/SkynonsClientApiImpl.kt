@@ -82,6 +82,31 @@ class SkynonsClientApiImpl(
         }
     }
 
+    override suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId> {
+        val response = httpClient.post(apiAddress + CREATE_SIMULATION_WITH_CONFIG_ENDPOINT) {
+            setBody(CreateSimulationWithConfigRequest(config))
+            contentType(ContentType.Application.Json)
+        }
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<CreateSimulationResponseData>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response.id)
+        }
+    }
+
+    override suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId> {
+        val response = httpClient.post(apiAddress + restoreFromHistoryEntryEndpoint(entryId))
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<CreateSimulationResponseData>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response.id)
+        }
+    }
+
     override suspend fun addHost(
         simulationId: SimulationId,
         name: ObjectId,
@@ -291,7 +316,7 @@ class SkynonsClientApiImpl(
     }
 
     override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> {
-        val response = httpClient.get(apiAddress + getHistoryEntry(entryId))
+        val response = httpClient.get(apiAddress + getHistoryEntryEndpoint(entryId))
 
         return handleResponseDefault(response) {
             val response = runCatching { response.body<HistoryEntry>() }
@@ -324,6 +349,7 @@ class SkynonsClientApiImpl(
 
         private const val API_V1_PREFIX = "/api/v1"
         private const val CREATE_SIMULATION_ENDPOINT = "$API_V1_PREFIX/create_simulation"
+        private const val CREATE_SIMULATION_WITH_CONFIG_ENDPOINT = "$API_V1_PREFIX/create_with_config"
 
         private const val API_V1_USERS_PREFIX = "$API_V1_PREFIX/users"
         private const val AUTHENTICATE_ENDPOINT = "$API_V1_USERS_PREFIX/authenticate"
@@ -335,6 +361,7 @@ class SkynonsClientApiImpl(
         private const val API_V1_HISTORY_PREFIX = "$API_V1_PREFIX/history"
         private const val LIST_HISTORY_ENDPOINT = "$API_V1_HISTORY_PREFIX/list"
 
+        private fun restoreFromHistoryEntryEndpoint(id: HistoryEntryId) = "$API_V1_PREFIX/restore/$id"
         private fun addHostEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_host"
         private fun addSwitchEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_switch"
         private fun addLinkEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_link"
@@ -343,6 +370,6 @@ class SkynonsClientApiImpl(
         private fun removeObjectEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/remove_object"
         private fun simulateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/simulate"
 
-        private fun getHistoryEntry(id: HistoryEntryId) = "$API_V1_HISTORY_PREFIX/entry/$id"
+        private fun getHistoryEntryEndpoint(id: HistoryEntryId) = "$API_V1_HISTORY_PREFIX/entry/$id"
     }
 }

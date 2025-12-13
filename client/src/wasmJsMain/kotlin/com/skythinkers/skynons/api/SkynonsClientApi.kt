@@ -11,6 +11,9 @@ interface SkynonsClientApi {
 
     // v1
     suspend fun createSimulation(): ApiResult<SimulationId>
+    suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId>
+    suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId>
+
     suspend fun addHost(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
     suspend fun addSwitch(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
     suspend fun addLink(
