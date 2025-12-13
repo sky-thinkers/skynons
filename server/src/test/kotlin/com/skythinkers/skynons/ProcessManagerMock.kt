@@ -2,12 +2,15 @@ package com.skythinkers.skynons
 
 import com.skythinkers.skynons.api.Connection
 import com.skythinkers.skynons.api.CreateSimulationResponseData
+import com.skythinkers.skynons.api.CreateSimulationWithConfigRequest
 import com.skythinkers.skynons.api.EmptyMessage
 import com.skythinkers.skynons.api.ErrorResponseData
 import com.skythinkers.skynons.api.Host
 import com.skythinkers.skynons.api.Link
 import com.skythinkers.skynons.api.RemoveObject
 import com.skythinkers.skynons.api.RemovedObjectList
+import com.skythinkers.skynons.api.RestoreSimulationRequest
+import com.skythinkers.skynons.api.SaveSimulationRequest
 import com.skythinkers.skynons.api.SimpleSimulationResult
 import com.skythinkers.skynons.api.SimulationApiMessage
 import com.skythinkers.skynons.api.SimulationResultRequest
@@ -16,6 +19,8 @@ import com.skythinkers.skynons.api.SimulationStateRequest
 import com.skythinkers.skynons.api.Switch
 import com.skythinkers.skynons.nons.NonsProcessManager
 import com.skythinkers.skynons.nons.ProcessId
+import kotlin.io.path.Path
+import kotlin.io.path.writeText
 
 class ProcessManagerMock : NonsProcessManager {
     private val simulations = mutableMapOf<ProcessId, Simulation>()
@@ -45,6 +50,10 @@ class ProcessManagerMock : NonsProcessManager {
     override fun close() {
         isClosed = true
         simulations.clear()
+    }
+
+    override fun killProcess(id: ProcessId) {
+        simulations.remove(id)
     }
 
     private fun ensureActive() {
@@ -112,7 +121,12 @@ class ProcessManagerMock : NonsProcessManager {
                 }
 
                 is SimulationResultRequest -> {
-                    SimpleSimulationResult("", "", "", "")
+                    val basePath = Path(message.outputDir)
+                    basePath.resolve("cwnd.svg").writeText("")
+                    basePath.resolve("reordering.svg").writeText("")
+                    basePath.resolve("rate.svg").writeText("")
+                    basePath.resolve("rtt.svg").writeText("")
+                    EmptyMessage
                 }
 
                 SimulationStateRequest -> {
@@ -122,6 +136,15 @@ class ProcessManagerMock : NonsProcessManager {
                         links = links.values.toList(),
                         connections = connections.values.toList(),
                     )
+                }
+
+                is SaveSimulationRequest -> {
+                    Path(message.outputPath).writeText("")
+                    EmptyMessage
+                }
+
+                is RestoreSimulationRequest, is CreateSimulationWithConfigRequest -> {
+                    ErrorResponseData("Restore are unsupported in mock")
                 }
 
                 is CreateSimulationResponseData, EmptyMessage, is ErrorResponseData, is SimpleSimulationResult, is SimulationState, is RemovedObjectList -> {

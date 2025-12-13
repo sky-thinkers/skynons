@@ -1,7 +1,7 @@
 package com.skythinkers.skynons.model.user
 
 import com.skythinkers.skynons.api.UserId
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * For internal use only. Not serializable for security reasons

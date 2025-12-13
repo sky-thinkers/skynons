@@ -7,10 +7,15 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.net.ServerSocket
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
 
 class NonsProcessManagerImpl(private val nonsPath: String, private val scope: CoroutineScope) : NonsProcessManager {
     private val client = HttpClient(OkHttp) {
@@ -19,6 +24,18 @@ class NonsProcessManagerImpl(private val nonsPath: String, private val scope: Co
         }
     }
     private val processIdToNonsProcess = ConcurrentHashMap<ProcessId, NonsProcess>()
+
+    private val cleaner = scope.launch {
+        while (isActive) {
+            delay(2.hours)
+            val stopTimestamp = Clock.System.now() - 4.hours
+            processIdToNonsProcess.filterValues {
+                it.stopIfTooOld(stopTimestamp)
+            }.forEach {
+                processIdToNonsProcess.remove(it.key, it.value)
+            }
+        }
+    }
 
     override suspend fun createSimulation(): ProcessId? {
         val process = tryStartBackend() ?: return null
@@ -59,6 +76,12 @@ class NonsProcessManagerImpl(private val nonsPath: String, private val scope: Co
     override fun close() {
         processIdToNonsProcess.values.forEach { process -> process.stop() }
         processIdToNonsProcess.clear()
+        scope.cancel()
+    }
+
+    override fun killProcess(id: ProcessId) {
+        val process = processIdToNonsProcess.remove(id)
+        process?.stop()
     }
 
     companion object {

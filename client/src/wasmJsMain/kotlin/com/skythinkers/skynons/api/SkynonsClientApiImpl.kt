@@ -15,6 +15,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.contentType
+import io.ktor.http.parameters
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readBuffer
 import io.ktor.utils.io.readText
@@ -72,6 +73,31 @@ class SkynonsClientApiImpl(
 
     override suspend fun createSimulation(): ApiResult<SimulationId> {
         val response = httpClient.post(apiAddress + CREATE_SIMULATION_ENDPOINT)
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<CreateSimulationResponseData>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response.id)
+        }
+    }
+
+    override suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId> {
+        val response = httpClient.post(apiAddress + CREATE_SIMULATION_WITH_CONFIG_ENDPOINT) {
+            setBody(CreateSimulationWithConfigRequest(config))
+            contentType(ContentType.Application.Json)
+        }
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<CreateSimulationResponseData>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response.id)
+        }
+    }
+
+    override suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId> {
+        val response = httpClient.post(apiAddress + restoreFromHistoryEntryEndpoint(entryId))
 
         return handleResponseDefault(response) {
             val response = runCatching { response.body<CreateSimulationResponseData>() }
@@ -266,6 +292,40 @@ class SkynonsClientApiImpl(
         }
     }
 
+    override suspend fun listHistory(
+        beforeEntryId: HistoryEntryId?,
+        limit: Int?,
+    ): ApiResult<HistoryEntryList> {
+        val response = httpClient.get(apiAddress + LIST_HISTORY_ENDPOINT) {
+            parameters {
+                if (beforeEntryId != null) {
+                    this["beforeId"] = beforeEntryId.toString()
+                }
+                if (limit != null) {
+                    this["limit"] = limit.toString()
+                }
+            }
+        }
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<HistoryEntryList>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response)
+        }
+    }
+
+    override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> {
+        val response = httpClient.get(apiAddress + getHistoryEntryEndpoint(entryId))
+
+        return handleResponseDefault(response) {
+            val response = runCatching { response.body<HistoryEntry>() }
+                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+
+            ApiResult.Success(response)
+        }
+    }
+
     private suspend inline fun <R> handleResponseDefault(
         response: HttpResponse,
         onOk: () -> ApiResult<R>,
@@ -289,6 +349,7 @@ class SkynonsClientApiImpl(
 
         private const val API_V1_PREFIX = "/api/v1"
         private const val CREATE_SIMULATION_ENDPOINT = "$API_V1_PREFIX/create_simulation"
+        private const val CREATE_SIMULATION_WITH_CONFIG_ENDPOINT = "$API_V1_PREFIX/create_with_config"
 
         private const val API_V1_USERS_PREFIX = "$API_V1_PREFIX/users"
         private const val AUTHENTICATE_ENDPOINT = "$API_V1_USERS_PREFIX/authenticate"
@@ -297,6 +358,10 @@ class SkynonsClientApiImpl(
         private const val LOGOUT_ENDPOINT = "$API_V1_USERS_PREFIX/logout"
         private const val SHORT_INFO_ENDPOINT = "$API_V1_USERS_PREFIX/shortInfo"
 
+        private const val API_V1_HISTORY_PREFIX = "$API_V1_PREFIX/history"
+        private const val LIST_HISTORY_ENDPOINT = "$API_V1_HISTORY_PREFIX/list"
+
+        private fun restoreFromHistoryEntryEndpoint(id: HistoryEntryId) = "$API_V1_PREFIX/restore/$id"
         private fun addHostEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_host"
         private fun addSwitchEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_switch"
         private fun addLinkEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_link"
@@ -304,5 +369,7 @@ class SkynonsClientApiImpl(
         private fun stateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/state"
         private fun removeObjectEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/remove_object"
         private fun simulateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/simulate"
+
+        private fun getHistoryEntryEndpoint(id: HistoryEntryId) = "$API_V1_HISTORY_PREFIX/entry/$id"
     }
 }

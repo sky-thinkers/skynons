@@ -1,33 +1,43 @@
 package com.skythinkers.skynons.database
 
+import com.skythinkers.skynons.api.HistoryEntryId
 import com.skythinkers.skynons.api.ShortUserInfo
 import com.skythinkers.skynons.api.UserId
+import com.skythinkers.skynons.model.history.ExtractedHistoryEntryData
+import com.skythinkers.skynons.model.history.HistoryEntryData
 import com.skythinkers.skynons.model.user.GeneratedToken
 import com.skythinkers.skynons.model.user.UserCredentials
 import com.skythinkers.skynons.model.user.UserCredentialsRef
 import com.skythinkers.skynons.model.user.UserRegistrationInfo
 import com.skythinkers.skynons.model.user.UserUpdatePasswordInfo
+import com.skythinkers.skynons.storage.BlobRef
 import io.ktor.util.logging.KtorSimpleLogger
 import kotlinx.coroutines.Dispatchers
-import kotlinx.datetime.Instant
-import org.jetbrains.exposed.exceptions.ExposedSQLException
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
+import kotlinx.coroutines.withContext
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.dao.id.CompositeID
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.postgresql.util.PSQLException
+import kotlin.time.Instant
 
 class DatabaseConnection(private val database: Database) : SkynonsDatabase, CredentialsDatabase {
     init {
         transaction(database) {
-            SchemaUtils.create(Users, Sessions)
+            SchemaUtils.create(Users, Sessions, Blobs, BlobRefs, SimulationHistory)
         }
     }
 
@@ -186,6 +196,145 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
         DatabaseResult.Success(activeTokens == 1L)
     }
 
+    override suspend fun touchBlob(blob: BlobRef, now: Instant): DatabaseResult<Unit> = transaction {
+        val decodedHash = blob.hexToByteArray()
+
+        val updated =
+            Blobs.update(where = { (Blobs.blobHash eq decodedHash) and (Blobs.state eq Blobs.STATE_ACTIVE) }) {
+                it[Blobs.accessed] = now
+            }
+        if (updated == 0) {
+            Blobs.insert {
+                it[Blobs.blobHash] = decodedHash
+                it[Blobs.accessed] = now
+            }
+        }
+
+        DatabaseResult.Success(Unit)
+    }
+
+    override suspend fun ownsBlob(
+        user: UserId,
+        blob: BlobRef,
+    ): DatabaseResult<Boolean> = transaction {
+        val decodedHash = blob.hexToByteArray()
+        val records = BlobRefs
+            .select(BlobRefs.blobHash, BlobRefs.owner)
+            .where {
+                (BlobRefs.blobHash eq decodedHash) and (BlobRefs.owner eq user)
+            }
+            .count()
+
+        DatabaseResult.Success(records == 1L)
+    }
+
+    override suspend fun accessBlob(
+        user: UserId,
+        blob: BlobRef,
+        now: Instant,
+    ): DatabaseResult<Boolean> = transaction {
+        val decodedHash = blob.hexToByteArray()
+
+        val updates = BlobRefs
+            .update(where = {
+                (BlobRefs.blobHash eq decodedHash) and (BlobRefs.owner eq user)
+            }) {
+                it[BlobRefs.accessed] = now
+            }
+
+        DatabaseResult.Success(updates == 1)
+    }
+
+    override suspend fun allocateBlob(
+        user: UserId,
+        blob: BlobRef,
+        now: Instant,
+    ): DatabaseResult<Unit> = transaction {
+        val decodedHash = blob.hexToByteArray()
+
+        val updatedRecords = BlobRefs.update(
+            where = {
+                (BlobRefs.blobHash eq decodedHash) and (BlobRefs.owner eq user)
+            }
+        ) {
+            it[BlobRefs.modified] = now
+            it[BlobRefs.accessed] = now
+        }
+        if (updatedRecords == 0) {
+            BlobRefs.insert {
+                it[BlobRefs.blobHash] = decodedHash
+                it[BlobRefs.owner] = user
+                it[BlobRefs.created] = now
+                it[BlobRefs.modified] = now
+                it[BlobRefs.accessed] = now
+            }
+        }
+
+        DatabaseResult.Success(Unit)
+    }
+
+    override suspend fun storeHistoryEntry(data: HistoryEntryData): DatabaseResult<HistoryEntryId> = transaction {
+        val id = SimulationHistory.insert {
+            it[SimulationHistory.owner] = data.owner
+            it[SimulationHistory.timestamp] = data.timestamp
+            it[SimulationHistory.configRef] = data.configRef.hexToByteArray()
+            it[SimulationHistory.resultsRef] = data.resultRef?.hexToByteArray()
+        }[SimulationHistory.id]
+
+        DatabaseResult.Success(id)
+    }
+
+    override suspend fun listHistoryLastEntries(
+        owner: UserId,
+        limit: Int,
+    ): DatabaseResult<List<ExtractedHistoryEntryData>> = transaction {
+        SimulationHistory
+            .selectAll()
+            .where { (SimulationHistory.owner eq owner) }
+            .orderBy(SimulationHistory.id, SortOrder.DESC)
+            .limit(limit)
+            .map(this::extractHistoryEntry)
+            .let { DatabaseResult.Success(it) }
+    }
+
+    override suspend fun listHistoryBeforeEntryId(
+        owner: UserId,
+        entryId: HistoryEntryId,
+        limit: Int,
+    ): DatabaseResult<List<ExtractedHistoryEntryData>> = transaction {
+        val toId = SimulationHistory
+            .select(SimulationHistory.id, SimulationHistory.owner)
+            .where { (SimulationHistory.id eq entryId) and (SimulationHistory.owner eq owner) }
+            .map { it[SimulationHistory.id] }
+            .singleOrNull()
+
+        if (toId == null) {
+            return@transaction DatabaseResult.NotFound("No such entry $entryId for user $owner")
+        }
+
+        SimulationHistory
+            .selectAll()
+            .where { (SimulationHistory.id less toId) and (SimulationHistory.owner eq owner) }
+            .orderBy(SimulationHistory.id, SortOrder.DESC)
+            .limit(limit)
+            .map(this::extractHistoryEntry)
+            .let { DatabaseResult.Success(it) }
+    }
+
+    override suspend fun getHistoryEntryById(
+        owner: UserId,
+        entryId: HistoryEntryId,
+    ): DatabaseResult<ExtractedHistoryEntryData> = transaction {
+        SimulationHistory
+            .selectAll()
+            .where { (SimulationHistory.id eq entryId) and (SimulationHistory.owner eq owner) }
+            .orderBy(SimulationHistory.id, SortOrder.DESC)
+            .map(this::extractHistoryEntry)
+            .singleOrNull()
+            ?.let { DatabaseResult.Success(it) }
+            ?: DatabaseResult.NotFound("No such entry $entryId for user $owner")
+    }
+
     override suspend fun removeExpiredTokens(byDate: Instant): DatabaseResult<Unit> = transaction {
         val removedTokens = Sessions
             .deleteWhere {
@@ -197,8 +346,15 @@ class DatabaseConnection(private val database: Database) : SkynonsDatabase, Cred
         DatabaseResult.Success(Unit)
     }
 
+    private fun extractHistoryEntry(row: ResultRow): ExtractedHistoryEntryData = ExtractedHistoryEntryData(
+        id = row[SimulationHistory.id],
+        timestamp = row[SimulationHistory.timestamp],
+        configRef = row[SimulationHistory.configRef].toHexString(),
+        resultRef = row[SimulationHistory.resultsRef]?.toHexString(),
+    )
+
     private suspend fun <T> transaction(block: suspend () -> DatabaseResult<T>): DatabaseResult<T> =
-        runCatching { newSuspendedTransaction(Dispatchers.IO, database) { block() } }
+        runCatching { withContext(Dispatchers.IO) { suspendTransaction(database) { block() } } }
             .getOrElse { e ->
                 return when {
                     e.isSerializationFailure() -> DatabaseResult.GeneralError("Serialization failure", e)

@@ -11,6 +11,9 @@ interface SkynonsClientApi {
 
     // v1
     suspend fun createSimulation(): ApiResult<SimulationId>
+    suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId>
+    suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId>
+
     suspend fun addHost(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
     suspend fun addSwitch(simulationId: SimulationId, name: ObjectId): ApiResult<Unit>
     suspend fun addLink(
@@ -44,6 +47,10 @@ interface SkynonsClientApi {
     suspend fun logout(oldPassword: String, newPassword: String): ApiResult<Unit>
 
     suspend fun shortUserInfo(oldPassword: String, newPassword: String): ApiResult<ShortUserInfo>
+
+    suspend fun listHistory(beforeEntryId: HistoryEntryId? = null, limit: Int? = null): ApiResult<HistoryEntryList>
+
+    suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry>
 }
 
 sealed interface ApiResult<out T> {

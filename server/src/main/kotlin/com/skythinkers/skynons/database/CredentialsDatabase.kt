@@ -7,8 +7,8 @@ import com.skythinkers.skynons.model.user.UserCredentials
 import com.skythinkers.skynons.model.user.UserCredentialsRef
 import com.skythinkers.skynons.model.user.UserRegistrationInfo
 import com.skythinkers.skynons.model.user.UserUpdatePasswordInfo
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 interface CredentialsDatabase {
     suspend fun <T> registerUser(

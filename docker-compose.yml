@@ -7,6 +7,7 @@ services:
       cache_to:
         - type=local,dest=build/docker-cache
       target: client
+    restart: unless-stopped
     depends_on:
       - server
     ports:
@@ -24,6 +25,7 @@ services:
       cache_to:
         - type=local,dest=build/docker-cache
       target: server
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_started
@@ -43,7 +45,7 @@ services:
 
   db:
     image: postgres:16.1
-    restart: always
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}

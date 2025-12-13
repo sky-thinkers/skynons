@@ -128,15 +128,20 @@ class SimulationServerMock {
 class SkynonsClientApiMock : SkynonsClientApi {
     private var simulations = emptyList<SimulationServerMock>()
 
-    override suspend fun simulateConfig(config: String): ApiResult<SimpleSimulationResult> {
-        TODO("V0 feature")
-    }
+    override suspend fun simulateConfig(config: String): ApiResult<SimpleSimulationResult> =
+        ApiResult.ServerError("Unsupported feature")
 
     override suspend fun createSimulation(): ApiResult<SimulationId> {
         val result = ApiResult.Success(simulations.size.toString())
         simulations += SimulationServerMock()
         return result
     }
+
+    override suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId> =
+        ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId> =
+        ApiResult.ServerError("Unsupported feature")
 
     override suspend fun addHost(simulationId: SimulationId, name: ObjectId): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
@@ -159,7 +164,8 @@ class SkynonsClientApiMock : SkynonsClientApi {
     ): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        return simulations.getOrNull(id)?.addLink(Link(name, fromId, toId, speed)) ?: ApiResult.ServerError("Unrecognized exception")
+        return simulations.getOrNull(id)?.addLink(Link(name, fromId, toId, speed))
+            ?: ApiResult.ServerError("Unrecognized exception")
     }
 
     override suspend fun addConnection(
@@ -171,7 +177,8 @@ class SkynonsClientApiMock : SkynonsClientApi {
     ): ApiResult<Unit> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-        return simulations.getOrNull(id)?.addConnection(Connection(name, senderId, receiverId, sizeToSend)) ?: ApiResult.ServerError("Unrecognized exception")
+        return simulations.getOrNull(id)?.addConnection(Connection(name, senderId, receiverId, sizeToSend))
+            ?: ApiResult.ServerError("Unrecognized exception")
     }
 
     override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<List<ObjectId>> {
@@ -237,4 +244,12 @@ class SkynonsClientApiMock : SkynonsClientApi {
         oldPassword: String,
         newPassword: String,
     ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun listHistory(
+        beforeEntryId: HistoryEntryId?,
+        limit: Int?,
+    ): ApiResult<HistoryEntryList> = ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> =
+        ApiResult.ServerError("Unsupported feature")
 }

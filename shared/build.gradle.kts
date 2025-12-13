@@ -22,4 +22,8 @@ kotlin {
             implementation(libs.kotlin.test)
         }
     }
+
+    compilerOptions {
+        optIn.add("kotlin.time.ExperimentalTime")
+    }
 }
