@@ -27,70 +27,228 @@ import kotlinx.coroutines.*
 @Composable
 fun App() {
     MaterialTheme {
-
-        val localContext = LocalPlatformContext.current
+        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiMock()) }
         val scope = rememberCoroutineScope()
 
-        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl("")) }
-
-        var simulationId by remember { mutableStateOf<String?>(null) }
-
-        var connectionError by remember { mutableStateOf<String?>(null) }
-
-        LaunchedEffect(api) {
-            runCatching {
-                // TODO: check and reuse simulation from window.location.hash
-                val resp = api.createSimulation()
-                val result = resp.resultOrNull()
-                if (result == null) {
-                    connectionError =
-                        "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
-                } else {
-                    window.location.hash = result
-                    simulationId = result
-                }
-            }.onFailure {
-                connectionError =
-                    "Не удалось подключиться к серверу: ${it.message ?: "Неопознанная ошибка"}"
+        var clientLogin by remember { mutableStateOf("") }
+        var authorizationStatus by remember { mutableStateOf(false) }
+        if (!authorizationStatus) {
+            AuthorizationPage(api) { login ->
+                clientLogin = login
+                authorizationStatus = true
             }
-        }
-        SideEffect {
-            document.onkeydown = handler@{ event ->
-                if (!event.ctrlKey) return@handler
-                when (event.key) {
-                    "l", "L" -> {
-                        println("local")
-                        simulationId = null
-                        api = SkynonsClientApiMock()
-                    }
-
-                    "e", "E" -> {
-                        simulationId = null
-                        api = SkynonsClientApiImpl("")
-                    }
-
-                    "d", "D" -> {
-                        simulationId = null
-                        api = SkynonsClientApiImpl()
+        } else {
+            SimulatorPage(api, clientLogin,
+                onApiChanged = { newApi ->
+                    api = newApi
+                },
+                onLogout = {
+                    scope.launch(Dispatchers.Default) {
+                        try {
+                            api.logout()
+                        } catch (_: Exception) {}
+                        finally {
+                            authorizationStatus = false
+                        }
                     }
                 }
-            }
+            )
         }
+    }
+}
+@Composable
+fun AuthorizationPage(api: SkynonsClientApi, onAuthorized: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
 
-        Column(
-            modifier = Modifier.fillMaxSize().safeContentPadding(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+    Box (
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column (
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val simulationId = simulationId
-            val connectionError = connectionError
-            when {
-                simulationId != null -> GraphRedactor(localContext, scope, api, simulationId)
-                connectionError != null -> Text("Не удалось подключиться к серверу $connectionError")
-                else -> {
-                    Text("Подключение к серверу...")
-                    CircularProgressIndicator()
+            Text("Вы не авторизованы")
+
+            var loginDialogVisible by remember { mutableStateOf(false) }
+            var registerDialogVisible by remember { mutableStateOf(false) }
+            var errorMessage by remember { mutableStateOf("") }
+
+            Button(
+                onClick = {
+                    loginDialogVisible = true
+                },
+                shape = RoundedCornerShape(10),
+                colors = ButtonColor.ADD
+            ) {
+                Text("Войти в аккаунт")
+            }
+            Button(
+                onClick = {
+                    registerDialogVisible = true
+                },
+                shape = RoundedCornerShape(10),
+                colors = ButtonColor.ADD
+            ) {
+                Text("Создать аккаунт")
+            }
+
+            AnimatedVisibility(errorMessage != "") {
+                SelectionContainer {
+                    Text(
+                        errorMessage,
+                        modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
+                    )
                 }
+            }
+
+            if (loginDialogVisible) {
+                TwoInputsDialog(
+                    title = "Вход в аккаунт",
+                    label1 = "Имя аккаунта",
+                    label2 = "Пароль",
+                    onConfirm = { login, password ->
+                        scope.launch(Dispatchers.Default) {
+                            try {
+                                val response = api.authenticate(login, password)
+                                val result = response.resultOrNull()
+                                if (result != null) {
+                                    errorMessage = ""
+                                    onAuthorized(result.login)
+                                } else {
+                                    val error = response.errorOrNull()
+                                    errorMessage = error?.message ?: "Unexpected error"
+                                }
+                            } catch (e: Exception) {
+                                errorMessage = "Unexpected error: ${e.message}"
+                            }
+                        }
+                    },
+                    onDismissRequest = {
+                        loginDialogVisible = false
+                    }
+                )
+            }
+
+            if (registerDialogVisible) {
+                TwoInputsDialog(
+                    title = "Регистрация",
+                    label1 = "Имя аккаунта",
+                    label2 = "Пароль",
+                    onConfirm = { login, password ->
+                        scope.launch(Dispatchers.Default) {
+                            try {
+                                val response = api.register(login, password)
+                                val result = response.resultOrNull()
+                                if (result != null) {
+                                    errorMessage = ""
+                                    onAuthorized(result.login)
+                                } else {
+                                    val error = response.errorOrNull()
+                                    errorMessage = error?.message ?: "Unexpected error"
+                                }
+                            } catch (e: Exception) {
+                                errorMessage = "Unexpected error: ${e.message}"
+                            }
+                        }
+                    },
+                    onDismissRequest = {
+                        registerDialogVisible = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SimulatorPage(api: SkynonsClientApi, clientLogin: String, onApiChanged: (SkynonsClientApi) -> Unit, onLogout: () -> Unit) {
+    val localContext = LocalPlatformContext.current
+    val scope = rememberCoroutineScope()
+
+    var simulationId by remember { mutableStateOf<String?>(null) }
+
+    var connectionError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(api) {
+        runCatching {
+            // TODO: check and reuse simulation from window.location.hash
+            val resp = api.createSimulation()
+            val result = resp.resultOrNull()
+            if (result == null) {
+                connectionError =
+                    "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
+            } else {
+                window.location.hash = result
+                simulationId = result
+            }
+        }.onFailure {
+            connectionError =
+                "Не удалось подключиться к серверу: ${it.message ?: "Неопознанная ошибка"}"
+        }
+    }
+    SideEffect {
+        document.onkeydown = handler@{ event ->
+            if (!event.ctrlKey) return@handler
+            when (event.key) {
+                "l", "L" -> {
+                    println("local")
+                    simulationId = null
+                    onApiChanged(SkynonsClientApiMock())
+                }
+
+                "e", "E" -> {
+                    simulationId = null
+                    onApiChanged(SkynonsClientApiImpl(""))
+                }
+
+                "d", "D" -> {
+                    simulationId = null
+                    onApiChanged(SkynonsClientApiImpl())
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().safeContentPadding(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val simulationId = simulationId
+        val connectionError = connectionError
+        when {
+            simulationId != null -> GraphRedactor(localContext, scope, api, simulationId)
+            connectionError != null -> Text("Не удалось подключиться к серверу $connectionError")
+            else -> {
+                Text("Подключение к серверу...")
+                CircularProgressIndicator()
+            }
+        }
+    }
+
+    Box (
+        modifier = Modifier.fillMaxSize()
+            .padding(10.dp),
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Column (
+            modifier = Modifier.width((window.innerWidth * 0.1).dp)
+                .border(BorderStroke(1.dp, Color.Gray), shape = RoundedCornerShape(5))
+                .background(
+                    color = Color(1f, 1f, 1f, 1f),
+                    shape = RoundedCornerShape(5)
+                )
+        ) {
+            Text("Аккаунт: $clientLogin", modifier = Modifier.padding(5.dp))
+            Button(
+                modifier = Modifier.padding(5.dp),
+                onClick = {
+                    onLogout()
+                },
+                shape = RoundedCornerShape(10),
+                colors = ButtonColor.DELETE
+            ) {
+                Text("Выйти")
             }
         }
     }
