@@ -13,17 +13,21 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.net.ServerSocket
+import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 
 class NonsProcessManagerImpl(private val nonsPath: String, private val scope: CoroutineScope) : NonsProcessManager {
+    private val threadLocalRandom = ThreadLocal.withInitial { SecureRandom.getInstanceStrong() }
     private val client = HttpClient(OkHttp) {
         install(WebSockets) {
             contentConverter = KotlinxWebsocketSerializationConverter(Json)
         }
     }
     private val processIdToNonsProcess = ConcurrentHashMap<ProcessId, NonsProcess>()
+
+    private val random: SecureRandom get() = threadLocalRandom.get()
 
     private val cleaner = scope.launch {
         while (isActive) {
@@ -39,9 +43,9 @@ class NonsProcessManagerImpl(private val nonsPath: String, private val scope: Co
 
     override suspend fun createSimulation(): ProcessId? {
         val process = tryStartBackend() ?: return null
-
-        processIdToNonsProcess[process.processId] = process
-        return process.processId
+        val externalId = ByteArray(32).also { random.nextBytes(it) }.toHexString()
+        processIdToNonsProcess[externalId] = process
+        return externalId
     }
 
     private suspend fun tryStartBackend(): NonsProcess? {
@@ -70,7 +74,7 @@ class NonsProcessManagerImpl(private val nonsPath: String, private val scope: Co
         return processIdToNonsProcess.getValue(id).message(message)
     }
 
-    private fun findFreePort(): ProcessId? =
+    private fun findFreePort(): Int? =
         runCatching { ServerSocket(0).use { socket -> socket.localPort } }.getOrNull()
 
     override fun close() {
