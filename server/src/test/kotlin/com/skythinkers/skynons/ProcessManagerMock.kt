@@ -30,8 +30,8 @@ class ProcessManagerMock : NonsProcessManager {
     override suspend fun createSimulation(): ProcessId {
         ensureActive()
         val id = nextId++
-        simulations[id] = Simulation()
-        return id
+        simulations[id.toString()] = Simulation()
+        return id.toString()
     }
 
     override fun checkId(id: ProcessId): Boolean {

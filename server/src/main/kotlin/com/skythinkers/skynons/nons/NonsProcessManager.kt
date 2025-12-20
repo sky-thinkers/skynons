@@ -2,7 +2,7 @@ package com.skythinkers.skynons.nons
 
 import com.skythinkers.skynons.api.SimulationApiMessage
 
-typealias ProcessId = Int
+typealias ProcessId = String
 
 interface NonsProcessManager : AutoCloseable {
     suspend fun createSimulation(): ProcessId?

@@ -100,10 +100,7 @@ suspend inline fun RoutingCall.callProcessId(
     ret: () -> Nothing,
 ): ProcessId {
 
-    val processId: ProcessId = parameters["id"]?.toInt() ?: run {
-        respond(HttpStatusCode.BadRequest, "Simulation id is not a number")
-        ret()
-    }
+    val processId: ProcessId = pathParameters["id"]!!
 
     if (!processManager.checkId(processId)) {
         logger.trace("Process $processId wasn't found")

@@ -26,11 +26,11 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 class NonsProcess(
-    val processId: ProcessId,
+    val port: Int,
     private val process: Process,
     private val client: HttpClient,
     private val scope: CoroutineScope,
-    private val log: Logger = KtorSimpleLogger("NonsProcess/$processId"),
+    private val log: Logger = KtorSimpleLogger("NonsProcess/$port"),
 ) {
     private val stopSemaphore: Semaphore = Semaphore(1, 1)
     private val messageQueue = Channel<Msg>(Channel.BUFFERED)
@@ -39,7 +39,7 @@ class NonsProcess(
     private var job: Job = scope.launch {
         runCatching {
             while (process.isAlive && isActive) {
-                client.webSocket("ws://localhost:$processId/pipe") {
+                client.webSocket("ws://localhost:$port/pipe") {
                     log.trace("enter websocket loop")
                     while (!stopSemaphore.tryAcquire() && isActive) {
                         val msgRes = messageQueue.receiveCatching()

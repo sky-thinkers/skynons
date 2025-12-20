@@ -84,8 +84,8 @@ private suspend inline fun RoutingContext.createImpl(
         path
     } else null
     try {
-        val port = processManager.createSimulation()
-        if (port == null) {
+        val procId = processManager.createSimulation()
+        if (procId == null) {
             call.respond(
                 HttpStatusCode.InternalServerError,
                 ErrorResponseData("Can not create simulation")
@@ -93,16 +93,16 @@ private suspend inline fun RoutingContext.createImpl(
         } else {
             if (tmpConfig != null) {
                 val isError = processManager.expectResponse<EmptyMessage>(
-                    port,
+                    procId,
                     RestoreSimulationRequest(tmpConfig.absolutePathString()),
                     logger
                 ).resultOrRespondError(call) == null
                 if (isError) {
-                    processManager.killProcess(port)
+                    processManager.killProcess(procId)
                     return
                 }
             }
-            call.respond(HttpStatusCode.OK, CreateSimulationResponseData(port.toString()))
+            call.respond(HttpStatusCode.OK, CreateSimulationResponseData(procId))
         }
     } catch (e: Exception) {
         call.respond(HttpStatusCode.InternalServerError, ErrorResponseData(e.toString()))
