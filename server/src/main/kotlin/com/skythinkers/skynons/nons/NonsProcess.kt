@@ -1,6 +1,7 @@
 package com.skythinkers.skynons.nons
 
 import com.skythinkers.skynons.api.SimulationApiMessage
+import com.skythinkers.skynons.api.SimulationStateRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
@@ -20,6 +21,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.serialization.json.Json
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Clock
@@ -34,7 +36,8 @@ class NonsProcess(
 ) {
     private val stopSemaphore: Semaphore = Semaphore(1, 1)
     private val messageQueue = Channel<Msg>(Channel.BUFFERED)
-    @Volatile private var lastActivity = Clock.System.now()
+    @Volatile
+    private var lastActivity = Clock.System.now()
 
     private var job: Job = scope.launch {
         runCatching {
@@ -50,7 +53,13 @@ class NonsProcess(
 
                         sendSerialized(msg.msg)
                         log.trace("Awaiting response")
-                        val response = runCatching { receiveDeserialized<SimulationApiMessage>() }
+
+                        val response = if (msg.msg is SimulationStateRequest) {
+                            runCatching { Json.decodeFromString<SimulationApiMessage>(receiveDeserialized<String>()) }
+                        } else {
+                            runCatching { receiveDeserialized<SimulationApiMessage>() }
+                        }
+
                         log.trace(
                             "Got response of type {}",
                             (response.getOrNull() ?: response.exceptionOrNull()!!)::class.java.name
