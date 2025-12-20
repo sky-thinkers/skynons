@@ -22,7 +22,7 @@ import kotlin.reflect.typeOf
 class RedactorState(
     val scope: CoroutineScope,
     val api: SkynonsClientApi,
-    val simulationId: SimulationId,
+    var simulationId: SimulationId
 ) {
     val hostsList = mutableStateListOf<Host>()
     val switchesList = mutableStateListOf<Switch>()
@@ -56,6 +56,18 @@ class RedactorState(
                 showError("Unexpected error: ${e.message}")
             }
         }
+    }
+
+    fun loadConfig(config: SimulationState, id: SimulationId) {
+        hostsList.clear()
+        switchesList.clear()
+        linksList.clear()
+        connectionsList.clear()
+        hostsList.addAll(config.hosts)
+        switchesList.addAll(config.switches)
+        linksList.addAll(config.links)
+        connectionsList.addAll(config.connections)
+        simulationId = id
     }
 
     fun tryRemoveObject(id: ObjectId) {
@@ -150,36 +162,33 @@ class RedactorState(
                 else -> emptyList<Nothing>()
             }
             list.forEach { (name, id) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val interactionSource = remember { MutableInteractionSource() }
-                    var text by remember { mutableStateOf(" $name ") }
-                    LaunchedEffect(interactionSource) {
-                        interactionSource.interactions.collect { interaction ->
-                            when (interaction) {
-                                is HoverInteraction.Enter -> text = "Удалить"
-                                is HoverInteraction.Exit -> text = " $name "
+                key(id) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        var text by remember { mutableStateOf(" $name ") }
+                        LaunchedEffect(interactionSource) {
+                            interactionSource.interactions.collect { interaction ->
+                                when (interaction) {
+                                    is HoverInteraction.Enter -> text = "Удалить"
+                                    is HoverInteraction.Exit -> text = " $name "
+                                }
                             }
                         }
-                    }
-//                    Text(
-//                        modifier = Modifier.padding(5.dp).background(Color.White, RoundedCornerShape(35)),
-//                        text = text
-//                    )
-                    Button(
-                        modifier = Modifier.padding(2.dp)
-                            .hoverable(interactionSource = interactionSource),
-                        shape = RoundedCornerShape(10),
-                        colors = ButtonColor.BLANK,
-                        onClick = {
-                            tryRemoveObject(id)
+                        Button(
+                            modifier = Modifier.padding(2.dp)
+                                .hoverable(interactionSource = interactionSource),
+                            shape = RoundedCornerShape(10),
+                            colors = ButtonColor.BLANK,
+                            onClick = {
+                                tryRemoveObject(id)
+                            }
+                        ) {
+                            Text(
+                                text = text
+                            )
                         }
-                    ) {
-                        Text(
-                            //modifier = Modifier.padding(5.dp).background(Color.White, RoundedCornerShape(35)),
-                            text = text
-                        )
                     }
                 }
             }

@@ -4,14 +4,23 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -24,166 +33,640 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 
+enum class Page {
+    LOGIN,
+    REGISTER,
+    CHANGE_PASS,
+    SIMULATOR
+}
+
 @Composable
 fun App() {
     MaterialTheme {
+        var apiType by remember { mutableStateOf("Mock") }
         var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiMock()) }
         val scope = rememberCoroutineScope()
 
         var clientLogin by remember { mutableStateOf("") }
+        var hash by remember { mutableStateOf("") }
         var authorizationStatus by remember { mutableStateOf(false) }
-        if (!authorizationStatus) {
-            AuthorizationPage(api) { login ->
-                clientLogin = login
-                authorizationStatus = true
-            }
-        } else {
-            SimulatorPage(api, clientLogin,
-                onApiChanged = { newApi ->
-                    api = newApi
-                },
-                onLogout = {
-                    scope.launch(Dispatchers.Default) {
-                        try {
-                            api.logout()
-                        } catch (_: Exception) {}
-                        finally {
-                            authorizationStatus = false
-                        }
-                    }
+        var page by remember { mutableStateOf(Page.SIMULATOR) }
+
+        window.onhashchange = { e ->
+            if (e.newURL.contains('#')) {
+                hash = e.newURL.substringAfter('#')
+                page = when (hash) {
+                    "AuthPage" -> Page.LOGIN
+                    "RegisterPage" -> Page.REGISTER
+                    "ChangePasswordPage" -> Page.CHANGE_PASS
+                    else -> page
                 }
-            )
+                if (hash.startsWith("Simulator-")) {
+                    page = Page.SIMULATOR
+                }
+            }
+        }
+
+        when (page) {
+            Page.SIMULATOR -> {
+                SimulatorPage(
+                    api, clientLogin, authorizationStatus, hash, apiType,
+                    onApiChanged = { newApi, type ->
+                        api = newApi
+                        apiType = type
+                    },
+                    onLogout = {
+                        scope.launch(Dispatchers.Default) {
+                            try {
+                                api.logout()
+                            } catch (_: Exception) {
+                            } finally {
+                                authorizationStatus = false
+                            }
+                        }
+                    },
+                    onLogin = {
+                        page = Page.LOGIN
+                    },
+                    onChangePassword = {
+                        page = Page.CHANGE_PASS
+                    }
+                )
+            }
+
+            Page.LOGIN -> {
+                AuthorizationPage(
+                    api,
+                    onAuthorized = { login ->
+                        clientLogin = login
+                        authorizationStatus = true
+                        page = Page.SIMULATOR
+                    },
+                    onTryRegister = {
+                        page = Page.REGISTER
+                    },
+                    onReturn = {
+                        page = Page.SIMULATOR
+                    }
+                )
+            }
+
+            Page.REGISTER -> {
+                RegisterPage(
+                    api,
+                    onAuthorized = { login ->
+                        clientLogin = login
+                        authorizationStatus = true
+                        page = Page.SIMULATOR
+                    },
+                    onTryLogin = {
+                        page = Page.LOGIN
+                    },
+                    onReturn = {
+                        page = Page.SIMULATOR
+                    }
+                )
+            }
+
+            Page.CHANGE_PASS -> {
+                ChangePasswordPage(
+                    api,
+                    clientLogin,
+                    onReturn = {
+                        page = Page.SIMULATOR
+                    }
+                )
+            }
         }
     }
 }
+
 @Composable
-fun AuthorizationPage(api: SkynonsClientApi, onAuthorized: (String) -> Unit) {
+fun AuthorizationPage(
+    api: SkynonsClientApi,
+    onAuthorized: (String) -> Unit,
+    onTryRegister: () -> Unit,
+    onReturn: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
 
-    Box (
+    LaunchedEffect(Unit) {
+        window.location.hash = "AuthPage"
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
+                .background(
+                    color = Color(0.9f, 0.9f, 0.9f, 0.9f),
+                    shape = RoundedCornerShape(3)
+                )
+                .padding(5.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text("Вернуться", modifier = Modifier.padding(5.dp).clickable(onClick = onReturn))
+        }
+    }
+
+    Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column (
+        Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Вы не авторизованы")
-
-            var loginDialogVisible by remember { mutableStateOf(false) }
-            var registerDialogVisible by remember { mutableStateOf(false) }
             var errorMessage by remember { mutableStateOf("") }
 
-            Button(
-                onClick = {
-                    loginDialogVisible = true
-                },
-                shape = RoundedCornerShape(10),
-                colors = ButtonColor.ADD
+            Column(
+                modifier = Modifier
+                    .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(5))
+                    .background(
+                        color = Color(0.95f, 0.95f, 0.95f, 1f),
+                        shape = RoundedCornerShape(5)
+                    )
+                    .width((window.innerWidth * 0.2).dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Войти в аккаунт")
-            }
-            Button(
-                onClick = {
-                    registerDialogVisible = true
-                },
-                shape = RoundedCornerShape(10),
-                colors = ButtonColor.ADD
-            ) {
-                Text("Создать аккаунт")
+                Column(
+                    modifier = Modifier.padding(5.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    var loginInput by remember { mutableStateOf("") }
+                    var passwordInput by remember { mutableStateOf("") }
+                    val focusRequester1 = remember { FocusRequester() }
+                    val focusRequester2 = remember { FocusRequester() }
+
+                    Text("Вход в аккаунт")
+
+                    TextField(
+                        value = loginInput,
+                        onValueChange = { loginInput = it },
+                        label = { Text("Имя аккаунта") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester1),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester2.requestFocus()
+                            }
+                        )
+                    )
+                    TextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        label = { Text("Пароль") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester2),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester1.requestFocus()
+                            }
+                        )
+                    )
+
+                    LaunchedEffect(Unit) {
+                        focusRequester1.requestFocus()
+                    }
+
+                    Button(
+                        onClick = {
+                            if (loginInput != "" && passwordInput != "") {
+                                scope.launch(Dispatchers.Default) {
+                                    try {
+                                        val response = api.authenticate(loginInput, passwordInput)
+                                        val result = response.resultOrNull()
+                                        if (result != null) {
+                                            errorMessage = ""
+                                            onAuthorized(result.login)
+                                        } else {
+                                            val error = response.errorOrNull()
+                                            errorMessage = error?.message ?: "Unexpected error"
+                                        }
+                                    } catch (e: Exception) {
+                                        errorMessage = "Unexpected error: ${e.message}"
+                                    }
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(10),
+                        colors = ButtonColor.ADD
+                    ) {
+                        Text("Войти")
+                    }
+
+                    Row {
+                        Text("Еще нет аккаунта? ")
+                        Text(
+                            buildAnnotatedString {
+                                append("Зарегистрируйтесь")
+                                addStyle(
+                                    style = SpanStyle(
+                                        color = Color(0xff64B5F6),
+                                        textDecoration = TextDecoration.Underline
+                                    ), start = 0, end = 17
+                                )
+                            },
+                            modifier = Modifier.clickable(onClick = onTryRegister)
+                        )
+                    }
+                }
             }
 
             AnimatedVisibility(errorMessage != "") {
                 SelectionContainer {
                     Text(
-                        errorMessage,
+                        " $errorMessage ",
                         modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
                     )
                 }
-            }
-
-            if (loginDialogVisible) {
-                TwoInputsDialog(
-                    title = "Вход в аккаунт",
-                    label1 = "Имя аккаунта",
-                    label2 = "Пароль",
-                    onConfirm = { login, password ->
-                        scope.launch(Dispatchers.Default) {
-                            try {
-                                val response = api.authenticate(login, password)
-                                val result = response.resultOrNull()
-                                if (result != null) {
-                                    errorMessage = ""
-                                    onAuthorized(result.login)
-                                } else {
-                                    val error = response.errorOrNull()
-                                    errorMessage = error?.message ?: "Unexpected error"
-                                }
-                            } catch (e: Exception) {
-                                errorMessage = "Unexpected error: ${e.message}"
-                            }
-                        }
-                    },
-                    onDismissRequest = {
-                        loginDialogVisible = false
-                    }
-                )
-            }
-
-            if (registerDialogVisible) {
-                TwoInputsDialog(
-                    title = "Регистрация",
-                    label1 = "Имя аккаунта",
-                    label2 = "Пароль",
-                    onConfirm = { login, password ->
-                        scope.launch(Dispatchers.Default) {
-                            try {
-                                val response = api.register(login, password)
-                                val result = response.resultOrNull()
-                                if (result != null) {
-                                    errorMessage = ""
-                                    onAuthorized(result.login)
-                                } else {
-                                    val error = response.errorOrNull()
-                                    errorMessage = error?.message ?: "Unexpected error"
-                                }
-                            } catch (e: Exception) {
-                                errorMessage = "Unexpected error: ${e.message}"
-                            }
-                        }
-                    },
-                    onDismissRequest = {
-                        registerDialogVisible = false
-                    }
-                )
             }
         }
     }
 }
 
 @Composable
-fun SimulatorPage(api: SkynonsClientApi, clientLogin: String, onApiChanged: (SkynonsClientApi) -> Unit, onLogout: () -> Unit) {
+fun RegisterPage(
+    api: SkynonsClientApi,
+    onAuthorized: (String) -> Unit,
+    onTryLogin: () -> Unit,
+    onReturn: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        window.location.hash = "RegisterPage"
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
+                .background(
+                    color = Color(0.9f, 0.9f, 0.9f, 0.9f),
+                    shape = RoundedCornerShape(3)
+                )
+                .padding(5.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text("Вернуться", modifier = Modifier.padding(5.dp).clickable(onClick = onReturn))
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            var errorMessage by remember { mutableStateOf("") }
+
+            Column(
+                modifier = Modifier
+                    .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(5))
+                    .background(
+                        color = Color(0.95f, 0.95f, 0.95f, 1f),
+                        shape = RoundedCornerShape(5)
+                    )
+                    .width((window.innerWidth * 0.2).dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
+                    modifier = Modifier.padding(5.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    var loginInput by remember { mutableStateOf("") }
+                    var passwordInput by remember { mutableStateOf("") }
+                    var passwordRepeatInput by remember { mutableStateOf("") }
+                    val focusRequester1 = remember { FocusRequester() }
+                    val focusRequester2 = remember { FocusRequester() }
+                    val focusRequester3 = remember { FocusRequester() }
+
+                    Text("Регистрация")
+
+                    TextField(
+                        value = loginInput,
+                        onValueChange = { loginInput = it },
+                        label = { Text("Имя аккаунта") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester1),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester2.requestFocus()
+                            }
+                        )
+                    )
+                    TextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        label = { Text("Пароль") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester2),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester3.requestFocus()
+                            }
+                        )
+                    )
+                    TextField(
+                        value = passwordRepeatInput,
+                        onValueChange = { passwordRepeatInput = it },
+                        label = { Text("Повтор пароля") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester3),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester1.requestFocus()
+                            }
+                        )
+                    )
+
+                    LaunchedEffect(Unit) {
+                        focusRequester1.requestFocus()
+                    }
+
+                    Button(
+                        onClick = {
+                            if (loginInput != "" && passwordInput != "") {
+                                if (passwordInput != passwordRepeatInput) {
+                                    errorMessage = "Пароли должны совпадать"
+                                } else {
+                                    scope.launch(Dispatchers.Default) {
+                                        try {
+                                            val response = api.register(loginInput, passwordInput)
+                                            val result = response.resultOrNull()
+                                            if (result != null) {
+                                                errorMessage = ""
+                                                onAuthorized(result.login)
+                                            } else {
+                                                val error = response.errorOrNull()
+                                                errorMessage = error?.message ?: "Unexpected error"
+                                            }
+                                        } catch (e: Exception) {
+                                            errorMessage = "Unexpected error: ${e.message}"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(10),
+                        colors = ButtonColor.ADD
+                    ) {
+                        Text("Создать аккаунт")
+                    }
+
+                    Row {
+                        Text("Уже есть аккаунт? ")
+                        Text(
+                            buildAnnotatedString {
+                                append("Войти")
+                                addStyle(
+                                    style = SpanStyle(
+                                        color = Color(0xff64B5F6),
+                                        textDecoration = TextDecoration.Underline
+                                    ), start = 0, end = 5
+                                )
+                            },
+                            modifier = Modifier.clickable(onClick = onTryLogin)
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(errorMessage != "") {
+                SelectionContainer {
+                    Text(
+                        " $errorMessage ",
+                        modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChangePasswordPage(
+    api: SkynonsClientApi,
+    clientLogin: String,
+    onReturn: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        window.location.hash = "ChangePasswordPage"
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
+                .background(
+                    color = Color(0.9f, 0.9f, 0.9f, 0.9f),
+                    shape = RoundedCornerShape(3)
+                )
+                .padding(5.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text("Вернуться", modifier = Modifier.padding(5.dp).clickable(onClick = onReturn))
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            var errorMessage by remember { mutableStateOf("") }
+
+            Column(
+                modifier = Modifier
+                    .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(5))
+                    .background(
+                        color = Color(0.95f, 0.95f, 0.95f, 1f),
+                        shape = RoundedCornerShape(5)
+                    )
+                    .width((window.innerWidth * 0.2).dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
+                    modifier = Modifier.padding(5.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    var oldpassInput by remember { mutableStateOf("") }
+                    var passwordInput by remember { mutableStateOf("") }
+                    var passwordRepeatInput by remember { mutableStateOf("") }
+                    val focusRequester1 = remember { FocusRequester() }
+                    val focusRequester2 = remember { FocusRequester() }
+                    val focusRequester3 = remember { FocusRequester() }
+
+                    Text("Смена пароля")
+
+                    TextField(
+                        value = oldpassInput,
+                        onValueChange = { oldpassInput = it },
+                        label = { Text("Старый пароль") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester1),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester2.requestFocus()
+                            }
+                        )
+                    )
+                    TextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        label = { Text("Новый пароль") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester2),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester3.requestFocus()
+                            }
+                        )
+                    )
+                    TextField(
+                        value = passwordRepeatInput,
+                        onValueChange = { passwordRepeatInput = it },
+                        label = { Text("Повтор пароля") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester3),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                focusRequester1.requestFocus()
+                            }
+                        )
+                    )
+
+                    LaunchedEffect(Unit) {
+                        focusRequester1.requestFocus()
+                    }
+
+                    Button(
+                        onClick = {
+                            if (oldpassInput != "" && passwordInput != "") {
+                                if (passwordInput != passwordRepeatInput) {
+                                    errorMessage = "Пароли должны совпадать"
+                                } else {
+                                    scope.launch(Dispatchers.Default) {
+                                        try {
+                                            val response = api.updatePassword(oldpassInput, passwordInput)
+                                            val result = response.resultOrNull()
+                                            if (result != null) {
+                                                errorMessage = ""
+                                                onReturn()
+                                            } else {
+                                                val error = response.errorOrNull()
+                                                errorMessage = error?.message ?: "Unexpected error"
+                                            }
+                                        } catch (e: Exception) {
+                                            errorMessage = "Unexpected error: ${e.message}"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(10),
+                        colors = ButtonColor.ADD
+                    ) {
+                        Text("Сменить пароль")
+                    }
+
+                    Text("Аккаунт: $clientLogin")
+                }
+            }
+
+            AnimatedVisibility(errorMessage != "") {
+                SelectionContainer {
+                    Text(
+                        " $errorMessage ",
+                        modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SimulatorPage(
+    api: SkynonsClientApi,
+    clientLogin: String,
+    authorizationStatus: Boolean,
+    hash: String,
+    apiType: String,
+    onApiChanged: (SkynonsClientApi, String) -> Unit,
+    onLogout: () -> Unit,
+    onLogin: () -> Unit,
+    onChangePassword: () -> Unit,
+) {
     val localContext = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
 
     var simulationId by remember { mutableStateOf<String?>(null) }
 
     var connectionError by remember { mutableStateOf<String?>(null) }
+    var simulationStateOverride by remember { mutableStateOf<SimulationState?>(null) }
 
-    LaunchedEffect(api) {
+    LaunchedEffect(api, hash) {
         runCatching {
-            // TODO: check and reuse simulation from window.location.hash
-            val resp = api.createSimulation()
-            val result = resp.resultOrNull()
-            if (result == null) {
-                connectionError =
-                    "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
+            if (hash.startsWith("Simulator-") && hash.substringAfter("Simulator-") != "") {
+                try {
+                    simulationId = null
+                    val resp = api.state(hash.substringAfter("Simulator-"))
+                    simulationStateOverride = resp.resultOrNull()
+                    if (simulationStateOverride == null) {
+                        connectionError = resp.errorOrNull()?.message ?: "Unknown Exception"
+                        simulationId = null
+                    } else {
+                        simulationId = hash.substringAfter("Simulator-")
+                        connectionError = null
+                    }
+                } catch (e: Exception) {
+                    connectionError = e.message
+                    simulationId = null
+                }
             } else {
-                window.location.hash = result
-                simulationId = result
+                val resp = api.createSimulation()
+                val result = resp.resultOrNull()
+                if (result == null) {
+                    connectionError =
+                        "Не удалось подключиться к серверу: ${resp.errorOrNull()?.message ?: "Неопознанная ошибка"}"
+                    simulationId = null
+                } else {
+                    window.location.hash = "Simulator-$result"
+                    simulationId = result
+                }
             }
         }.onFailure {
             connectionError =
                 "Не удалось подключиться к серверу: ${it.message ?: "Неопознанная ошибка"}"
+            simulationId = null
         }
     }
     SideEffect {
@@ -193,17 +676,17 @@ fun SimulatorPage(api: SkynonsClientApi, clientLogin: String, onApiChanged: (Sky
                 "l", "L" -> {
                     println("local")
                     simulationId = null
-                    onApiChanged(SkynonsClientApiMock())
+                    onApiChanged(SkynonsClientApiMock(), "Mock")
                 }
 
                 "e", "E" -> {
                     simulationId = null
-                    onApiChanged(SkynonsClientApiImpl(""))
+                    onApiChanged(SkynonsClientApiImpl(""), "E")
                 }
 
                 "d", "D" -> {
                     simulationId = null
-                    onApiChanged(SkynonsClientApiImpl())
+                    onApiChanged(SkynonsClientApiImpl(), "Impl")
                 }
             }
         }
@@ -217,7 +700,7 @@ fun SimulatorPage(api: SkynonsClientApi, clientLogin: String, onApiChanged: (Sky
         val simulationId = simulationId
         val connectionError = connectionError
         when {
-            simulationId != null -> GraphRedactor(localContext, scope, api, simulationId)
+            simulationId != null -> GraphRedactor(localContext, scope, api, simulationId, simulationStateOverride)
             connectionError != null -> Text("Не удалось подключиться к серверу $connectionError")
             else -> {
                 Text("Подключение к серверу...")
@@ -226,29 +709,82 @@ fun SimulatorPage(api: SkynonsClientApi, clientLogin: String, onApiChanged: (Sky
         }
     }
 
-    Box (
-        modifier = Modifier.fillMaxSize()
-            .padding(10.dp),
-        contentAlignment = Alignment.TopEnd
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
-        Column (
-            modifier = Modifier.width((window.innerWidth * 0.1).dp)
-                .border(BorderStroke(1.dp, Color.Gray), shape = RoundedCornerShape(5))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
                 .background(
-                    color = Color(1f, 1f, 1f, 1f),
-                    shape = RoundedCornerShape(5)
+                    color = Color(0.9f, 0.9f, 0.9f, 0.9f),
+                    shape = RoundedCornerShape(3)
                 )
+                .padding(5.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text("Аккаунт: $clientLogin", modifier = Modifier.padding(5.dp))
-            Button(
-                modifier = Modifier.padding(5.dp),
-                onClick = {
-                    onLogout()
-                },
-                shape = RoundedCornerShape(10),
-                colors = ButtonColor.DELETE
+            Text("$apiType | $hash")
+
+            if (authorizationStatus) {
+                var changePassButtonVisible by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Column {
+                        Text(
+                            "Настройки",
+                            modifier = Modifier.padding(5.dp)
+                                .clickable(onClick = { changePassButtonVisible = !changePassButtonVisible })
+                        )
+                        AnimatedVisibility(changePassButtonVisible) {
+                            Button(
+                                onClick = onChangePassword,
+                                shape = RoundedCornerShape(10),
+                                colors = ButtonColor.ADD
+                            ) {
+                                Text("Сменить пароль")
+                            }
+                        }
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                Text("Выйти")
+                Row {
+                    if (authorizationStatus) {
+                        Text("Аккаунт: $clientLogin. ", modifier = Modifier.padding(5.dp))
+                        Text(
+                            buildAnnotatedString {
+                                append("Выйти")
+                                addStyle(
+                                    style = SpanStyle(
+                                        color = Color(0xff64B5F6),
+                                        textDecoration = TextDecoration.Underline
+                                    ), start = 0, end = 5
+                                )
+                            },
+                            modifier = Modifier.padding(5.dp).clickable(onClick = onLogout)
+                        )
+                    } else {
+                        Text("Вы не авторизованы. ", modifier = Modifier.padding(5.dp).clickable(onClick = onLogin))
+                        Text(
+                            buildAnnotatedString {
+                                append("Войти")
+                                addStyle(
+                                    style = SpanStyle(
+                                        color = Color(0xff64B5F6),
+                                        textDecoration = TextDecoration.Underline
+                                    ), start = 0, end = 5
+                                )
+                            },
+                            modifier = Modifier.padding(5.dp).clickable(onClick = onLogin)
+                        )
+                    }
+                }
             }
         }
     }
@@ -259,9 +795,9 @@ fun GraphRedactor(
     localContext: PlatformContext,
     scope: CoroutineScope,
     api: SkynonsClientApi,
-    simulationId: SimulationId
+    simulationId: SimulationId,
+    simulationStateOverride: SimulationState?,
 ) {
-//    val screenHeight = window.innerHeight
     val screenWidth = window.innerWidth
 
     val imageLoader = remember(localContext) {
@@ -286,6 +822,23 @@ fun GraphRedactor(
     var showConnectionDialog by remember { mutableStateOf(false) }
 
     val state = remember { RedactorState(scope, api, simulationId) }
+
+    LaunchedEffect(simulationStateOverride, simulationId) {
+        if (simulationStateOverride != null) {
+            state.loadConfig(simulationStateOverride, simulationId)
+            if (simulationStateOverride.result != null) {
+                ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.rtt.toByteArray()).build()
+                    .also { rttSvg = it }
+                cwndSvg =
+                    ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.cwnd.toByteArray()).build()
+                rateSvg =
+                    ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.rate.toByteArray()).build()
+                packetReorderingSvg =
+                    ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.packetReordering.toByteArray())
+                        .build()
+            }
+        }
+    }
 
     Row(
         modifier = Modifier

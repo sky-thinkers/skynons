@@ -194,7 +194,6 @@ class SkynonsClientApiMock : SkynonsClientApi {
     override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-
         return runCatching {
             val sim = simulations[id]
             val state = SimulationState(
