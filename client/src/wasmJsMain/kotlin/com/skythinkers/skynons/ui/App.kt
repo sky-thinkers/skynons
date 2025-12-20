@@ -5,13 +5,32 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -20,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
@@ -27,11 +47,23 @@ import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
-import com.skythinkers.skynons.api.*
-import io.ktor.utils.io.core.*
+import com.skythinkers.skynons.api.Connection
+import com.skythinkers.skynons.api.Host
+import com.skythinkers.skynons.api.Link
+import com.skythinkers.skynons.api.SimulationId
+import com.skythinkers.skynons.api.SimulationState
+import com.skythinkers.skynons.api.SkynonsClientApi
+import com.skythinkers.skynons.api.SkynonsClientApiImpl
+import com.skythinkers.skynons.api.SkynonsClientApiMock
+import com.skythinkers.skynons.api.Switch
+import com.skythinkers.skynons.api.errorOrNull
+import com.skythinkers.skynons.api.resultOrNull
+import io.ktor.utils.io.core.toByteArray
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 enum class Page {
     LOGIN,
@@ -43,8 +75,8 @@ enum class Page {
 @Composable
 fun App() {
     MaterialTheme {
-        var apiType by remember { mutableStateOf("Mock") }
-        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiMock()) }
+        var apiType by remember { mutableStateOf("SkyNoNs") }
+        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl("")) }
         val scope = rememberCoroutineScope()
 
         var clientLogin by remember { mutableStateOf("") }
@@ -227,7 +259,8 @@ fun AuthorizationPage(
                             onNext = {
                                 focusRequester1.requestFocus()
                             }
-                        )
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
 
                     LaunchedEffect(Unit) {
@@ -379,7 +412,8 @@ fun RegisterPage(
                             onNext = {
                                 focusRequester3.requestFocus()
                             }
-                        )
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
                     TextField(
                         value = passwordRepeatInput,
@@ -392,7 +426,8 @@ fun RegisterPage(
                             onNext = {
                                 focusRequester1.requestFocus()
                             }
-                        )
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
 
                     LaunchedEffect(Unit) {
@@ -534,7 +569,8 @@ fun ChangePasswordPage(
                             onNext = {
                                 focusRequester2.requestFocus()
                             }
-                        )
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
                     TextField(
                         value = passwordInput,
@@ -547,7 +583,8 @@ fun ChangePasswordPage(
                             onNext = {
                                 focusRequester3.requestFocus()
                             }
-                        )
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
                     TextField(
                         value = passwordRepeatInput,
@@ -560,7 +597,8 @@ fun ChangePasswordPage(
                             onNext = {
                                 focusRequester1.requestFocus()
                             }
-                        )
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
                     )
 
                     LaunchedEffect(Unit) {
@@ -681,12 +719,12 @@ fun SimulatorPage(
 
                 "e", "E" -> {
                     simulationId = null
-                    onApiChanged(SkynonsClientApiImpl(""), "E")
+                    onApiChanged(SkynonsClientApiImpl(""), "SkyNoNs")
                 }
 
                 "d", "D" -> {
                     simulationId = null
-                    onApiChanged(SkynonsClientApiImpl(), "Impl")
+                    onApiChanged(SkynonsClientApiImpl(), "LocalNoNs")
                 }
             }
         }
@@ -834,7 +872,8 @@ fun GraphRedactor(
                 rateSvg =
                     ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.rate.toByteArray()).build()
                 packetReorderingSvg =
-                    ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.packetReordering.toByteArray())
+                    ImageRequest.Builder(localContext)
+                        .data(simulationStateOverride.result!!.packetReordering.toByteArray())
                         .build()
             }
         }
