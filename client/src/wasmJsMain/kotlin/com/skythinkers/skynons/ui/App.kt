@@ -45,8 +45,8 @@ enum class Page {
 @Composable
 fun App() {
     MaterialTheme {
-        var apiType by remember { mutableStateOf("Mock") }
-        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiMock()) }
+        var apiType by remember { mutableStateOf("SkyNoNs") }
+        var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl("")) }
         val scope = rememberCoroutineScope()
 
         var clientLogin by remember { mutableStateOf("") }
@@ -717,19 +717,18 @@ fun SimulatorPage(
             if (!event.ctrlKey) return@handler
             when (event.key) {
                 "l", "L" -> {
-                    println("local")
                     simulationId = null
                     onApiChanged(SkynonsClientApiMock(), "Mock")
                 }
 
                 "e", "E" -> {
                     simulationId = null
-                    onApiChanged(SkynonsClientApiImpl(""), "E")
+                    onApiChanged(SkynonsClientApiImpl(""), "SkyNoNs")
                 }
 
                 "d", "D" -> {
                     simulationId = null
-                    onApiChanged(SkynonsClientApiImpl(), "Impl")
+                    onApiChanged(SkynonsClientApiImpl(), "Local")
                 }
             }
         }
@@ -892,11 +891,17 @@ fun SimulatorPage(
                             onClick = {
                                 scope.launch {
                                     runCatching {
-                                        val resp = api.createSimulation()
+                                        val resp = api.createSimulationWithConfig(entry.config)
                                         val result = resp.resultOrNull()
                                         if (result != null) {
                                             window.location.hash = "Simulator-$result"
                                             simulationId = result
+                                            val resp = api.state(result)
+                                            simulationStateOverride = resp.resultOrNull()
+                                            if (simulationStateOverride == null) {
+                                                connectionError = resp.errorOrNull()?.message ?: "Unknown Exception"
+                                                simulationId = null
+                                            }
                                         }
                                     }
                                 }
