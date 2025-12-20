@@ -267,10 +267,7 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun logout(
-        oldPassword: String,
-        newPassword: String,
-    ): ApiResult<Unit> {
+    override suspend fun logout(): ApiResult<Unit> {
         val response = httpClient.post(apiAddress + LOGOUT_ENDPOINT)
 
         return handleResponseDefault(response) {

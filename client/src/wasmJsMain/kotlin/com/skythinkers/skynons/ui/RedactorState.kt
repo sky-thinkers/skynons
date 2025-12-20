@@ -1,22 +1,18 @@
 package com.skythinkers.skynons.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.skythinkers.skynons.api.*
+import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,7 +22,7 @@ import kotlin.reflect.typeOf
 class RedactorState(
     val scope: CoroutineScope,
     val api: SkynonsClientApi,
-    val simulationId: SimulationId,
+    var simulationId: SimulationId
 ) {
     val hostsList = mutableStateListOf<Host>()
     val switchesList = mutableStateListOf<Switch>()
@@ -60,6 +56,18 @@ class RedactorState(
                 showError("Unexpected error: ${e.message}")
             }
         }
+    }
+
+    fun loadConfig(config: SimulationState, id: SimulationId) {
+        hostsList.clear()
+        switchesList.clear()
+        linksList.clear()
+        connectionsList.clear()
+        hostsList.addAll(config.hosts)
+        switchesList.addAll(config.switches)
+        linksList.addAll(config.links)
+        connectionsList.addAll(config.connections)
+        simulationId = id
     }
 
     fun tryRemoveObject(id: ObjectId) {
@@ -154,32 +162,34 @@ class RedactorState(
                 else -> emptyList<Nothing>()
             }
             list.forEach { (name, id) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val interactionSource = remember { MutableInteractionSource() }
-                    var text by remember { mutableStateOf(" $name ") }
-                    LaunchedEffect(interactionSource) {
-                        interactionSource.interactions.collect { interaction ->
-                            when (interaction) {
-                                is HoverInteraction.Enter -> text = "Удалить"
-                                is HoverInteraction.Exit -> text = " $name "
+                key(id) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        var text by remember { mutableStateOf(" $name ") }
+                        LaunchedEffect(interactionSource) {
+                            interactionSource.interactions.collect { interaction ->
+                                when (interaction) {
+                                    is HoverInteraction.Enter -> text = "Удалить"
+                                    is HoverInteraction.Exit -> text = " $name "
+                                }
                             }
                         }
-                    }
-                    Text(
-                        modifier = Modifier.padding(5.dp).background(Color.White, RoundedCornerShape(35)),
-                        text = text
-                    )
-                    Button(
-                        modifier = Modifier.padding(2.dp).size(26.dp, 18.dp)
-                            .hoverable(interactionSource = interactionSource),
-                        shape = RoundedCornerShape(10),
-                        colors = ButtonColor.DELETE,
-                        onClick = {
-                            tryRemoveObject(id)
+                        Button(
+                            modifier = Modifier.padding(2.dp)
+                                .hoverable(interactionSource = interactionSource),
+                            shape = RoundedCornerShape(10),
+                            colors = ButtonColor.BLANK,
+                            onClick = {
+                                tryRemoveObject(id)
+                            }
+                        ) {
+                            Text(
+                                text = text
+                            )
                         }
-                    ) {}
+                    }
                 }
             }
         }
@@ -187,8 +197,15 @@ class RedactorState(
 
     @Composable
     inline fun <reified T : NetworkObject> ObjectsList(buttonText: String, crossinline onAddElement: () -> Unit) {
+        val w = when (typeOf<T>()) {
+            typeOf<Host>() ->(window.innerWidth * 0.055).dp
+            typeOf<Switch>() ->(window.innerWidth * 0.06).dp
+            typeOf<Link>() ->(window.innerWidth * 0.05).dp
+            else -> (window.innerWidth * 0.08).dp
+        }
         Column(
-            modifier = Modifier.padding(5.dp)
+            modifier = Modifier.padding(5.dp).width(w),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             show<T>()
             Button(

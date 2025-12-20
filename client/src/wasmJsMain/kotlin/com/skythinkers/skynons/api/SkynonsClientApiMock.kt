@@ -194,7 +194,6 @@ class SkynonsClientApiMock : SkynonsClientApi {
     override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
         val id = simulationId.toIntOrNull() ?: return ApiResult.ClientError("Simulation id must be a number")
 
-
         return runCatching {
             val sim = simulations[id]
             val state = SimulationState(
@@ -223,22 +222,19 @@ class SkynonsClientApiMock : SkynonsClientApi {
     override suspend fun authenticate(
         login: String,
         password: String,
-    ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
+    ): ApiResult<ShortUserInfo> = ApiResult.Success(ShortUserInfo(1L, login))
 
     override suspend fun register(
         login: String,
         password: String,
-    ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
+    ): ApiResult<ShortUserInfo> = ApiResult.Success(ShortUserInfo(1L, login))
 
     override suspend fun updatePassword(
         oldPassword: String,
         newPassword: String,
     ): ApiResult<Unit> = ApiResult.ServerError("Unsupported feature")
 
-    override suspend fun logout(
-        oldPassword: String,
-        newPassword: String,
-    ): ApiResult<Unit> = ApiResult.ServerError("Unsupported feature")
+    override suspend fun logout(): ApiResult<Unit> = ApiResult.ServerError("Unsupported feature")
 
     override suspend fun shortUserInfo(
         oldPassword: String,

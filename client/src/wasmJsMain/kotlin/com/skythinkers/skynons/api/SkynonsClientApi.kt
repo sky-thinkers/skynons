@@ -44,7 +44,7 @@ interface SkynonsClientApi {
 
     suspend fun updatePassword(oldPassword: String, newPassword: String): ApiResult<Unit>
 
-    suspend fun logout(oldPassword: String, newPassword: String): ApiResult<Unit>
+    suspend fun logout(): ApiResult<Unit>
 
     suspend fun shortUserInfo(oldPassword: String, newPassword: String): ApiResult<ShortUserInfo>
 
