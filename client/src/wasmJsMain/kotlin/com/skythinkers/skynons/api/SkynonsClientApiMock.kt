@@ -1,5 +1,8 @@
 package com.skythinkers.skynons.api
 
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+
 class SimulationServerMock {
     var myHosts = emptyList<Host>()
     var mySwitches = emptyList<Switch>()
@@ -241,10 +244,16 @@ class SkynonsClientApiMock : SkynonsClientApi {
         newPassword: String,
     ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
 
+    @OptIn(ExperimentalTime::class)
     override suspend fun listHistory(
         beforeEntryId: HistoryEntryId?,
         limit: Int?,
-    ): ApiResult<HistoryEntryList> = ApiResult.ServerError("Unsupported feature")
+    ): ApiResult<HistoryEntryList> = ApiResult.Success(HistoryEntryList(listOf(
+        HistoryEntry(0, Instant.fromEpochSeconds(0), ""),
+        HistoryEntry(1, Instant.fromEpochSeconds(0), ""),
+        HistoryEntry(2, Instant.fromEpochSeconds(0), ""),
+        HistoryEntry(3, Instant.fromEpochSeconds(0), "")
+    ).filter { it.id < (beforeEntryId ?: (it.id + 1)) }))
 
     override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> =
         ApiResult.ServerError("Unsupported feature")

@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
@@ -222,7 +224,11 @@ fun AuthorizationPage(
                         label = { Text("Пароль") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester2),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            keyboardType = KeyboardType.Password
+                        ),
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 focusRequester1.requestFocus()
@@ -374,7 +380,11 @@ fun RegisterPage(
                         label = { Text("Пароль") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester2),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            keyboardType = KeyboardType.Password
+                        ),
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 focusRequester3.requestFocus()
@@ -387,7 +397,11 @@ fun RegisterPage(
                         label = { Text("Повтор пароля") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester3),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            keyboardType = KeyboardType.Password
+                        ),
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 focusRequester1.requestFocus()
@@ -529,7 +543,11 @@ fun ChangePasswordPage(
                         label = { Text("Старый пароль") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester1),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            keyboardType = KeyboardType.Password
+                        ),
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 focusRequester2.requestFocus()
@@ -542,7 +560,11 @@ fun ChangePasswordPage(
                         label = { Text("Новый пароль") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester2),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            keyboardType = KeyboardType.Password
+                        ),
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 focusRequester3.requestFocus()
@@ -555,7 +577,11 @@ fun ChangePasswordPage(
                         label = { Text("Повтор пароля") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(2.dp).focusRequester(focusRequester3),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            keyboardType = KeyboardType.Password
+                        ),
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 focusRequester1.requestFocus()
@@ -633,6 +659,23 @@ fun SimulatorPage(
     var connectionError by remember { mutableStateOf<String?>(null) }
     var simulationStateOverride by remember { mutableStateOf<SimulationState?>(null) }
 
+    val simulationsHistory = remember { mutableStateListOf<HistoryEntry>() }
+
+    LaunchedEffect(authorizationStatus, clientLogin) {
+        if (authorizationStatus) {
+            try {
+                println("Requesting history...")
+                val resp = api.listHistory()
+                val list = resp.resultOrNull()
+                println("Got $list")
+                if (list != null) {
+                    simulationsHistory.addAll(list.entries)
+                }
+                println("Now 1 $simulationsHistory")
+            } catch (_: Exception) {
+            }
+        }
+    }
     LaunchedEffect(api, hash) {
         runCatching {
             if (hash.startsWith("Simulator-") && hash.substringAfter("Simulator-") != "") {
@@ -713,76 +756,156 @@ fun SimulatorPage(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
-                .background(
-                    color = Color(0.9f, 0.9f, 0.9f, 0.9f),
-                    shape = RoundedCornerShape(3)
-                )
-                .padding(5.dp),
-            contentAlignment = Alignment.Center
         ) {
-            Text("$apiType | $hash")
+            var changePassButtonVisible by remember { mutableStateOf(false) }
+            var historyVisible by remember { mutableStateOf(false) }
 
-            if (authorizationStatus) {
-                var changePassButtonVisible by remember { mutableStateOf(false) }
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Column {
-                        Text(
-                            "Настройки",
-                            modifier = Modifier.padding(5.dp)
-                                .clickable(onClick = { changePassButtonVisible = !changePassButtonVisible })
-                        )
-                        AnimatedVisibility(changePassButtonVisible) {
-                            Button(
-                                onClick = onChangePassword,
-                                shape = RoundedCornerShape(10),
-                                colors = ButtonColor.ADD
-                            ) {
-                                Text("Сменить пароль")
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
+                    .background(
+                        color = Color(0.9f, 0.9f, 0.9f, 0.9f),
+                        shape = RoundedCornerShape(3)
+                    )
+                    .padding(5.dp),
+                contentAlignment = Alignment.Center
+            ) {
+//            Text("$apiType | $hash")
+
+                if (authorizationStatus) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row {
+                            Column {
+                                Text(
+                                    "Настройки",
+                                    modifier = Modifier.padding(5.dp)
+                                        .clickable(onClick = {
+                                            changePassButtonVisible = !changePassButtonVisible
+                                        })
+                                )
                             }
                         }
                     }
                 }
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Row {
+                        if (authorizationStatus) {
+                            Text("Аккаунт: $clientLogin. ", modifier = Modifier.padding(5.dp))
+                            Text(
+                                buildAnnotatedString {
+                                    append("Выйти")
+                                    addStyle(
+                                        style = SpanStyle(
+                                            color = Color(0xff64B5F6),
+                                            textDecoration = TextDecoration.Underline
+                                        ), start = 0, end = 5
+                                    )
+                                },
+                                modifier = Modifier.padding(5.dp).clickable(onClick = onLogout)
+                            )
+                        } else {
+                            Text("Вы не авторизованы. ", modifier = Modifier.padding(5.dp).clickable(onClick = onLogin))
+                            Text(
+                                buildAnnotatedString {
+                                    append("Войти")
+                                    addStyle(
+                                        style = SpanStyle(
+                                            color = Color(0xff64B5F6),
+                                            textDecoration = TextDecoration.Underline
+                                        ), start = 0, end = 5
+                                    )
+                                },
+                                modifier = Modifier.padding(5.dp).clickable(onClick = onLogin)
+                            )
+                        }
+                    }
+                }
             }
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Row {
-                    if (authorizationStatus) {
-                        Text("Аккаунт: $clientLogin. ", modifier = Modifier.padding(5.dp))
-                        Text(
-                            buildAnnotatedString {
-                                append("Выйти")
-                                addStyle(
-                                    style = SpanStyle(
-                                        color = Color(0xff64B5F6),
-                                        textDecoration = TextDecoration.Underline
-                                    ), start = 0, end = 5
-                                )
-                            },
-                            modifier = Modifier.padding(5.dp).clickable(onClick = onLogout)
+
+            AnimatedVisibility(changePassButtonVisible) {
+                Column(
+                    modifier = Modifier
+                        .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
+                        .background(
+                            color = Color(0.95f, 0.95f, 0.95f, 1f),
+                            shape = RoundedCornerShape(3)
                         )
-                    } else {
-                        Text("Вы не авторизованы. ", modifier = Modifier.padding(5.dp).clickable(onClick = onLogin))
-                        Text(
-                            buildAnnotatedString {
-                                append("Войти")
-                                addStyle(
-                                    style = SpanStyle(
-                                        color = Color(0xff64B5F6),
-                                        textDecoration = TextDecoration.Underline
-                                    ), start = 0, end = 5
-                                )
-                            },
-                            modifier = Modifier.padding(5.dp).clickable(onClick = onLogin)
+                        .padding(5.dp)
+                ) {
+                    Button(
+                        onClick = onChangePassword,
+                        shape = RoundedCornerShape(10),
+                        colors = ButtonColor.ADD
+                    ) {
+                        Text("Сменить пароль")
+                    }
+                    Button(
+                        onClick = { historyVisible = !historyVisible },
+                        shape = RoundedCornerShape(10),
+                        colors = ButtonColor.ADD
+                    ) {
+                        Text("История симуляций")
+                    }
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                runCatching {
+                                    val resp = api.createSimulation()
+                                    val result = resp.resultOrNull()
+                                    if (result != null) {
+                                        window.location.hash = "Simulator-$result"
+                                        simulationId = result
+                                    }
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(10),
+                        colors = ButtonColor.ADD
+                    ) {
+                        Text("Новая симуляция")
+                    }
+                }
+            }
+
+            AnimatedVisibility(historyVisible && changePassButtonVisible) {
+                Column(
+                    modifier = Modifier
+                        .border(BorderStroke(1.dp, Color.LightGray), shape = RoundedCornerShape(3))
+                        .background(
+                            color = Color(0.95f, 0.95f, 0.95f, 1f),
+                            shape = RoundedCornerShape(3)
                         )
+                        .padding(5.dp)
+                ) {
+                    simulationsHistory.forEach { entry ->
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    runCatching {
+                                        val resp = api.createSimulation()
+                                        val result = resp.resultOrNull()
+                                        if (result != null) {
+                                            window.location.hash = "Simulator-$result"
+                                            simulationId = result
+                                        }
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(10),
+                            colors = ButtonColor.ADD
+                        ) {
+                            Text("Симуляция №${entry.id}")
+                        }
                     }
                 }
             }
@@ -834,7 +957,8 @@ fun GraphRedactor(
                 rateSvg =
                     ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.rate.toByteArray()).build()
                 packetReorderingSvg =
-                    ImageRequest.Builder(localContext).data(simulationStateOverride.result!!.packetReordering.toByteArray())
+                    ImageRequest.Builder(localContext)
+                        .data(simulationStateOverride.result!!.packetReordering.toByteArray())
                         .build()
             }
         }
