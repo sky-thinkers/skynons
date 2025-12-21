@@ -13,6 +13,7 @@ fun Application.configureRouting(
     processManager: NonsProcessManager,
     accountManager: AccountManager,
     historyManager: HistoryManager,
+    continuationManager: ContinuationManager,
 ) {
     routing {
         route("api") {
@@ -24,7 +25,8 @@ fun Application.configureRouting(
                 route("history") {
                     history(historyManager)
                 }
-                apiV1(processManager, historyManager)
+                apiV1(processManager, historyManager, continuationManager)
+                cont(continuationManager)
             }
         }
     }

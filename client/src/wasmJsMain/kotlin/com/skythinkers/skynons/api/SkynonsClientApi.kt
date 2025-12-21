@@ -38,6 +38,10 @@ interface SkynonsClientApi {
 
     suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult>
 
+    suspend fun stopSimulation(simulationId: SimulationId): ApiResult<Unit>
+
+    suspend fun suspendSimulation(simulationId: SimulationId): ApiResult<Unit>
+
     suspend fun authenticate(login: String, password: String): ApiResult<ShortUserInfo>
 
     suspend fun register(login: String, password: String): ApiResult<ShortUserInfo>
@@ -48,7 +52,7 @@ interface SkynonsClientApi {
 
     suspend fun shortUserInfo(oldPassword: String, newPassword: String): ApiResult<ShortUserInfo>
 
-    suspend fun listHistory(beforeEntryId: HistoryEntryId? = null, limit: Int? = null): ApiResult<HistoryEntryList>
+    suspend fun listHistory(beforeEntryId: HistoryEntryId? = null, limit: Int? = null, withResults: Boolean): ApiResult<HistoryEntryList>
 
     suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry>
 }

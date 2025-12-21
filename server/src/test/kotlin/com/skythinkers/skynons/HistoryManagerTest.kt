@@ -128,7 +128,7 @@ class HistoryManagerTest {
         val extracted1 = historyManager.getEntryById(aliceUid, id1).getOrThrow()
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
 
-        val extractedList = historyManager.listLastEntries(aliceUid, limit = 2).getOrThrow()
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 2,).getOrThrow()
         assertEquals(listOf(extracted2, extracted1), extractedList)
     }
 
@@ -143,7 +143,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2).getOrThrow()
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2,).getOrThrow()
         assertEquals(listOf(extracted2, extracted1), extractedList)
     }
 
@@ -159,7 +159,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listLastEntries(aliceUid, limit = 3).getOrThrow()
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 3,).getOrThrow()
         assertEquals(listOf(extracted3, extracted2, extracted1), extractedList)
     }
 
@@ -175,7 +175,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2).getOrThrow()
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2,).getOrThrow()
         assertEquals(listOf(extracted2, extracted1), extractedList)
     }
 
@@ -189,7 +189,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listLastEntries(aliceUid, limit = 1).getOrThrow()
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 1,).getOrThrow()
         assertEquals(listOf(extracted3), extractedList)
     }
 
@@ -203,7 +203,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 1).getOrThrow()
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 1,).getOrThrow()
         assertEquals(listOf(extracted2), extractedList)
     }
 

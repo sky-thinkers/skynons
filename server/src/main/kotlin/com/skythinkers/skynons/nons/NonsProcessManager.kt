@@ -9,4 +9,5 @@ interface NonsProcessManager : AutoCloseable {
     fun checkId(id: ProcessId): Boolean
     suspend fun message(id: ProcessId, message: SimulationApiMessage): SimulationApiMessage
     fun killProcess(id: ProcessId)
+    suspend fun suspendProcess(id: ProcessId)
 }

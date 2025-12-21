@@ -2,6 +2,7 @@ package com.skythinkers.skynons.nons
 
 import com.skythinkers.skynons.api.ErrorResponseData
 import com.skythinkers.skynons.api.SimulationApiMessage
+import com.skythinkers.skynons.routing.ContinuationManager
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingCall
@@ -49,6 +50,22 @@ suspend fun <T : SimulationApiMessage> BackendResponse<T>.resultOrRespondError(c
 
     is BackendResponse.Error -> {
         call.respond(HttpStatusCode.BadRequest, res)
+        null
+    }
+
+    is BackendResponse.WellFormed -> {
+        res
+    }
+}
+
+suspend fun <T : SimulationApiMessage> BackendResponse<T>.resultOrRespondError(token: ContinuationManager.Token): T? = when (this) {
+    is BackendResponse.Illegal -> {
+        token.respond(HttpStatusCode.InternalServerError, res)
+        null
+    }
+
+    is BackendResponse.Error -> {
+        token.respond(HttpStatusCode.BadRequest, res)
         null
     }
 

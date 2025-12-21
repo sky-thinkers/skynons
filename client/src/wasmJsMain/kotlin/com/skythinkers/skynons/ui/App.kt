@@ -18,10 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
@@ -664,7 +667,6 @@ fun SimulatorPage(
     onChangePassword: () -> Unit,
 ) {
     val localContext = LocalPlatformContext.current
-    val scope = rememberCoroutineScope()
 
     var simulationId by remember { mutableStateOf<String?>(null) }
 
@@ -738,7 +740,7 @@ fun SimulatorPage(
         val simulationId = simulationId
         val connectionError = connectionError
         when {
-            simulationId != null -> GraphRedactor(localContext, scope, api, simulationId, simulationStateOverride)
+            simulationId != null -> GraphRedactor(localContext, api, simulationId, simulationStateOverride)
             connectionError != null -> Text("Не удалось подключиться к серверу $connectionError")
             else -> {
                 Text("Подключение к серверу...")
@@ -762,27 +764,64 @@ fun SimulatorPage(
                 .padding(5.dp),
             contentAlignment = Alignment.Center
         ) {
+            val scope = rememberCoroutineScope()
+
             Text("$apiType | $hash")
 
-            if (authorizationStatus) {
-                var changePassButtonVisible by remember { mutableStateOf(false) }
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Column {
-                        Text(
-                            "Настройки",
-                            modifier = Modifier.padding(5.dp)
-                                .clickable(onClick = { changePassButtonVisible = !changePassButtonVisible })
-                        )
-                        AnimatedVisibility(changePassButtonVisible) {
+            var optionsVisible by remember { mutableStateOf(false) }
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Column {
+                    Text(
+                        "Настройки",
+                        modifier = Modifier.padding(5.dp)
+                            .clickable(onClick = { optionsVisible = !optionsVisible })
+                    )
+                    AnimatedVisibility(optionsVisible) {
+                        Row {
                             Button(
-                                onClick = onChangePassword,
+                                onClick = {
+                                    scope.launch {
+                                        val simId = simulationId
+                                        if (simId != null) {
+                                            api.stopSimulation(simId)
+                                        }
+                                    }
+                                },
                                 shape = RoundedCornerShape(10),
                                 colors = ButtonColor.ADD
                             ) {
-                                Text("Сменить пароль")
+                                Text("Завершить симуляцию")
+                            }
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        val simId = simulationId
+                                        if (simId != null) {
+                                            api.suspendSimulation(simId)
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(10),
+                                colors = ButtonColor.ADD
+                            ) {
+                                Text("Приостановить симуляцию")
+                            }
+                            ImportConfigButton(api) { id ->
+                                simulationId = id
+                                window.location.hash = "Simulator-$id"
+                            }
+
+                            if (authorizationStatus) {
+                                Button(
+                                    onClick = onChangePassword,
+                                    shape = RoundedCornerShape(10),
+                                    colors = ButtonColor.ADD
+                                ) {
+                                    Text("Сменить пароль")
+                                }
                             }
                         }
                     }
@@ -829,13 +868,72 @@ fun SimulatorPage(
 }
 
 @Composable
+private fun ImportConfigButton(
+    api: SkynonsClientApi,
+    setSimulation: (SimulationId) -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var isDialogShown by remember { mutableStateOf(false) }
+    Button(
+        onClick = {
+            isDialogShown = true
+        },
+        shape = RoundedCornerShape(10),
+        colors = ButtonColor.ADD
+    ) {
+        Text("Создать из конфига")
+    }
+    if (isDialogShown) {
+        var textValue by remember { mutableStateOf(TextFieldValue()) }
+        val focusRequester = remember { FocusRequester() }
+        val onConfirm = {
+            coroutineScope.launch {
+                val id = api.createSimulationWithConfig(textValue.text).resultOrNull() ?: return@launch
+                setSimulation(id)
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { isDialogShown = false },
+            title = { Text("Импорт конфигурации") },
+            text = {
+                TextField(
+                    value = textValue,
+                    onValueChange = { textValue = it },
+                    label = { Text("Конфигурация") },
+                    modifier = Modifier.focusRequester(focusRequester),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onConfirm()
+                        isDialogShown = false
+                    }
+                ) {
+                    Text("Загрузить")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { isDialogShown = false }
+                ) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+}
+
+@Composable
 fun GraphRedactor(
     localContext: PlatformContext,
-    scope: CoroutineScope,
     api: SkynonsClientApi,
     simulationId: SimulationId,
     simulationStateOverride: SimulationState?,
 ) {
+    val scope = rememberCoroutineScope()
+
     val screenWidth = window.innerWidth
 
     val imageLoader = remember(localContext) {
