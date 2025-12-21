@@ -21,12 +21,14 @@ interface HistoryManager {
     suspend fun listLastEntries(
         owner: UserId,
         limit: Int,
+        withResults: Boolean,
     ): Result<List<HistoryEntry>>
 
     suspend fun listEntriesBefore(
         owner: UserId,
         beforeId: HistoryEntryId,
         limit: Int,
+        withResults: Boolean,
     ): Result<List<HistoryEntry>>
 
     suspend fun getEntryById(owner: UserId, id: HistoryEntryId): Result<HistoryEntry>

@@ -19,6 +19,7 @@ import io.ktor.http.parameters
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readBuffer
 import io.ktor.utils.io.readText
+import kotlinx.coroutines.delay
 
 class SkynonsClientApiImpl(
     private val apiAddress: String = LOCAL_API_ADDRESS,
@@ -29,7 +30,7 @@ class SkynonsClientApiImpl(
     },
 ) : SkynonsClientApi {
 
-    override suspend fun simulateConfig(config: String): ApiResult<SimpleSimulationResult> {
+    override suspend fun simulateConfig(config: String): ApiResult<SimpleSimulationResult> = callWrapper {
         val response = httpClient.post(apiAddress + SIMULATE_V0_ENDPOINT) {
             setBody(config)
             contentType(ContentType.Application.Yaml)
@@ -71,10 +72,10 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun createSimulation(): ApiResult<SimulationId> {
+    override suspend fun createSimulation(): ApiResult<SimulationId> = callWrapper {
         val response = httpClient.post(apiAddress + CREATE_SIMULATION_ENDPOINT)
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<CreateSimulationResponseData>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -82,13 +83,13 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId> {
+    override suspend fun createSimulationWithConfig(config: String): ApiResult<SimulationId> = callWrapper {
         val response = httpClient.post(apiAddress + CREATE_SIMULATION_WITH_CONFIG_ENDPOINT) {
             setBody(CreateSimulationWithConfigRequest(config))
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<CreateSimulationResponseData>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -96,27 +97,28 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId> {
-        val response = httpClient.post(apiAddress + restoreFromHistoryEntryEndpoint(entryId))
+    override suspend fun restoreSimulationFromHistoryEntry(entryId: HistoryEntryId): ApiResult<SimulationId> =
+        callWrapper {
+            val response = httpClient.post(apiAddress + restoreFromHistoryEntryEndpoint(entryId))
 
-        return handleResponseDefault(response) {
-            val response = runCatching { response.body<CreateSimulationResponseData>() }
-                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+            return handleResponseDefault(response) { response ->
+                val response = runCatching { response.body<CreateSimulationResponseData>() }
+                    .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
-            ApiResult.Success(response.id)
+                ApiResult.Success(response.id)
+            }
         }
-    }
 
     override suspend fun addHost(
         simulationId: SimulationId,
         name: ObjectId,
-    ): ApiResult<Unit> {
+    ): ApiResult<Unit> = callWrapper {
         val response = httpClient.post(apiAddress + addHostEndpoint(simulationId)) {
             setBody(Host(name))
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             ApiResult.Success(Unit)
         }
     }
@@ -125,13 +127,13 @@ class SkynonsClientApiImpl(
     override suspend fun addSwitch(
         simulationId: SimulationId,
         name: ObjectId,
-    ): ApiResult<Unit> {
+    ): ApiResult<Unit> = callWrapper {
         val response = httpClient.post(apiAddress + addSwitchEndpoint(simulationId)) {
             setBody(Switch(name))
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             ApiResult.Success(Unit)
         }
     }
@@ -142,7 +144,7 @@ class SkynonsClientApiImpl(
         fromId: ObjectId,
         toId: ObjectId,
         speed: SpeedString,
-    ): ApiResult<Unit> {
+    ): ApiResult<Unit> = callWrapper {
         val response = httpClient.post(apiAddress + addLinkEndpoint(simulationId)) {
             setBody(
                 Link(
@@ -155,7 +157,7 @@ class SkynonsClientApiImpl(
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             ApiResult.Success(Unit)
         }
     }
@@ -166,7 +168,7 @@ class SkynonsClientApiImpl(
         senderId: ObjectId,
         receiverId: ObjectId,
         sizeToSend: SizeString,
-    ): ApiResult<Unit> {
+    ): ApiResult<Unit> = callWrapper {
         val response = httpClient.post(apiAddress + addConnectionEndpoint(simulationId)) {
             setBody(
                 Connection(
@@ -179,28 +181,29 @@ class SkynonsClientApiImpl(
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             ApiResult.Success(Unit)
         }
     }
 
-    override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<List<ObjectId>> {
-        val response = httpClient.delete(apiAddress + removeObjectEndpoint(simulationId)) {
-            setBody(RemoveObject(objectId))
-            contentType(ContentType.Application.Json)
-        }
-        return handleResponseDefault(response) {
-            val response = runCatching { response.body<RemovedObjectList>() }
-                .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
+    override suspend fun removeObject(simulationId: SimulationId, objectId: ObjectId): ApiResult<List<ObjectId>> =
+        callWrapper {
+            val response = httpClient.delete(apiAddress + removeObjectEndpoint(simulationId)) {
+                setBody(RemoveObject(objectId))
+                contentType(ContentType.Application.Json)
+            }
+            return handleResponseDefault(response) { response ->
+                val response = runCatching { response.body<RemovedObjectList>() }
+                    .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
-            ApiResult.Success(response.ids)
+                ApiResult.Success(response.ids)
+            }
         }
-    }
 
-    override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> {
+    override suspend fun state(simulationId: SimulationId): ApiResult<SimulationState> = callWrapper {
         val response = httpClient.get(apiAddress + stateEndpoint(simulationId))
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<SimulationState>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -208,10 +211,10 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult> {
+    override suspend fun simulate(simulationId: SimulationId): ApiResult<SimpleSimulationResult> = callWrapper {
         val response = httpClient.post(apiAddress + simulateEndpoint(simulationId))
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<SimpleSimulationResult>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -219,16 +222,32 @@ class SkynonsClientApiImpl(
         }
     }
 
+    override suspend fun stopSimulation(simulationId: SimulationId): ApiResult<Unit> = callWrapper {
+        val response = httpClient.post(apiAddress + stopEndpoint(simulationId))
+
+        return handleResponseDefault(response) { response ->
+            ApiResult.Success(Unit)
+        }
+    }
+
+    override suspend fun suspendSimulation(simulationId: SimulationId): ApiResult<Unit> = callWrapper {
+        val response = httpClient.post(apiAddress + suspendEndpoint(simulationId))
+
+        return handleResponseDefault(response) { response ->
+            ApiResult.Success(Unit)
+        }
+    }
+
     override suspend fun authenticate(
         login: String,
         password: String,
-    ): ApiResult<ShortUserInfo> {
+    ): ApiResult<ShortUserInfo> = callWrapper {
         val response = httpClient.post(apiAddress + AUTHENTICATE_ENDPOINT) {
             setBody(LoginRequest(login = login, password = password))
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<ShortUserInfo>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -239,13 +258,13 @@ class SkynonsClientApiImpl(
     override suspend fun register(
         login: String,
         password: String,
-    ): ApiResult<ShortUserInfo> {
+    ): ApiResult<ShortUserInfo> = callWrapper {
         val response = httpClient.post(apiAddress + REGISTER_ENDPOINT) {
             setBody(RegistrationRequest(login = login, password = password))
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<ShortUserInfo>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -256,21 +275,21 @@ class SkynonsClientApiImpl(
     override suspend fun updatePassword(
         oldPassword: String,
         newPassword: String,
-    ): ApiResult<Unit> {
+    ): ApiResult<Unit> = callWrapper {
         val response = httpClient.post(apiAddress + UPDATE_PASSWORD_ENDPOINT) {
             setBody(PasswordUpdateRequest(oldPassword = oldPassword, newPassword = newPassword))
             contentType(ContentType.Application.Json)
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             ApiResult.Success(Unit)
         }
     }
 
-    override suspend fun logout(): ApiResult<Unit> {
+    override suspend fun logout(): ApiResult<Unit> = callWrapper {
         val response = httpClient.post(apiAddress + LOGOUT_ENDPOINT)
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             ApiResult.Success(Unit)
         }
     }
@@ -278,10 +297,10 @@ class SkynonsClientApiImpl(
     override suspend fun shortUserInfo(
         oldPassword: String,
         newPassword: String,
-    ): ApiResult<ShortUserInfo> {
+    ): ApiResult<ShortUserInfo> = callWrapper {
         val response = httpClient.post(apiAddress + SHORT_INFO_ENDPOINT)
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<ShortUserInfo>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -292,7 +311,8 @@ class SkynonsClientApiImpl(
     override suspend fun listHistory(
         beforeEntryId: HistoryEntryId?,
         limit: Int?,
-    ): ApiResult<HistoryEntryList> {
+        withResults: Boolean,
+    ): ApiResult<HistoryEntryList> = callWrapper {
         val response = httpClient.get(apiAddress + LIST_HISTORY_ENDPOINT) {
             parameters {
                 if (beforeEntryId != null) {
@@ -301,10 +321,13 @@ class SkynonsClientApiImpl(
                 if (limit != null) {
                     this["limit"] = limit.toString()
                 }
+                if (withResults) {
+                    this["withResults"] = "true"
+                }
             }
         }
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<HistoryEntryList>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -312,10 +335,10 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> {
+    override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> = callWrapper {
         val response = httpClient.get(apiAddress + getHistoryEntryEndpoint(entryId))
 
-        return handleResponseDefault(response) {
+        return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<HistoryEntry>() }
                 .getOrElse { return ApiResult.MalformedResponseError("Unexpected server response: $it") }
 
@@ -325,17 +348,47 @@ class SkynonsClientApiImpl(
 
     private suspend inline fun <R> handleResponseDefault(
         response: HttpResponse,
-        onOk: () -> ApiResult<R>,
-    ): ApiResult<R> = when (response.status) {
-        HttpStatusCode.OK -> onOk()
+        onOk: (response: HttpResponse) -> ApiResult<R>,
+    ): ApiResult<R> {
+        var response = response
+        while (true) {
+            return when (response.status) {
+                HttpStatusCode.OK -> {
+                    if (response.headers.contains(Headers.CONTINUATION)) {
+                        val cont = response.headers[Headers.CONTINUATION]!!
+                        while (true) {
+                            delay(3000)
+                            val response2 = httpClient.post(apiAddress + CONTINUATION_ENDPOINT) {
+                                headers.append(Headers.CONTINUATION, cont)
+                            }
+                            if (response2.headers[Headers.CONTINUATION] != Headers.CONTINUATION_KEEP) {
+                                response = response2
+                                break
+                            }
+                        }
+                        continue
+                    } else {
+                        onOk(response)
+                    }
+                }
 
-        HttpStatusCode.BadRequest -> ApiResult.ClientError(response.bodyAsText())
+                HttpStatusCode.BadRequest -> ApiResult.ClientError(response.bodyAsText())
 
-        HttpStatusCode.NotFound -> ApiResult.NotFound(response.bodyAsText())
+                HttpStatusCode.NotFound -> ApiResult.NotFound(response.bodyAsText())
 
-        HttpStatusCode.InternalServerError -> ApiResult.ServerError(response.bodyAsText())
+                HttpStatusCode.InternalServerError -> ApiResult.ServerError(response.bodyAsText())
 
-        else -> ApiResult.MalformedResponseError("Unexpected server response code ${response.status}")
+                HttpStatusCode.Unauthorized -> ApiResult.ClientError("Illegal login or password")
+
+                else -> ApiResult.MalformedResponseError("Unexpected server response code ${response.status}")
+            }
+        }
+    }
+
+    private inline fun <R> callWrapper(call: () -> ApiResult<R>): ApiResult<R> = runCatching {
+        call()
+    }.getOrElse {
+        ApiResult.ClientError(it.toString())
     }
 
     companion object {
@@ -358,6 +411,8 @@ class SkynonsClientApiImpl(
         private const val API_V1_HISTORY_PREFIX = "$API_V1_PREFIX/history"
         private const val LIST_HISTORY_ENDPOINT = "$API_V1_HISTORY_PREFIX/list"
 
+        private const val CONTINUATION_ENDPOINT = "$API_V1_PREFIX/continuation"
+
         private fun restoreFromHistoryEntryEndpoint(id: HistoryEntryId) = "$API_V1_PREFIX/restore/$id"
         private fun addHostEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_host"
         private fun addSwitchEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/add_switch"
@@ -366,6 +421,8 @@ class SkynonsClientApiImpl(
         private fun stateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/state"
         private fun removeObjectEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/remove_object"
         private fun simulateEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/simulate"
+        private fun stopEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/stop"
+        private fun suspendEndpoint(simulationId: SimulationId) = "$API_V1_PREFIX/$simulationId/suspend"
 
         private fun getHistoryEntryEndpoint(id: HistoryEntryId) = "$API_V1_HISTORY_PREFIX/entry/$id"
     }

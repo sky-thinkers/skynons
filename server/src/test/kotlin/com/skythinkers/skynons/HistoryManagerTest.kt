@@ -128,7 +128,7 @@ class HistoryManagerTest {
         val extracted1 = historyManager.getEntryById(aliceUid, id1).getOrThrow()
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
 
-        val extractedList = historyManager.listLastEntries(aliceUid, limit = 2).getOrThrow()
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 2, withResults = true).getOrThrow()
         assertEquals(listOf(extracted2, extracted1), extractedList)
     }
 
@@ -143,7 +143,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2).getOrThrow()
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2, withResults = true).getOrThrow()
         assertEquals(listOf(extracted2, extracted1), extractedList)
     }
 
@@ -159,7 +159,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listLastEntries(aliceUid, limit = 3).getOrThrow()
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 3, withResults = true).getOrThrow()
         assertEquals(listOf(extracted3, extracted2, extracted1), extractedList)
     }
 
@@ -175,7 +175,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2).getOrThrow()
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 2, withResults = true).getOrThrow()
         assertEquals(listOf(extracted2, extracted1), extractedList)
     }
 
@@ -189,7 +189,7 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listLastEntries(aliceUid, limit = 1).getOrThrow()
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 1, withResults = true).getOrThrow()
         assertEquals(listOf(extracted3), extractedList)
     }
 
@@ -203,8 +203,29 @@ class HistoryManagerTest {
         val extracted2 = historyManager.getEntryById(aliceUid, id2).getOrThrow()
         val extracted3 = historyManager.getEntryById(aliceUid, id3).getOrThrow()
 
-        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 1).getOrThrow()
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id3, limit = 1, withResults = true).getOrThrow()
         assertEquals(listOf(extracted2), extractedList)
+    }
+
+    @Test
+    fun `withResults = false ignores results listLast`() = runTest { historyManager, aliceUid, eveUid ->
+        val id1 = historyManager.storeEntry(aliceUid, CONFIG1, RESULTS1).getOrThrow()
+
+        val extracted1 = historyManager.getEntryById(aliceUid, id1).getOrThrow()
+
+        val extractedList = historyManager.listLastEntries(aliceUid, limit = 1, withResults = false).getOrThrow()
+        assertEquals(listOf(extracted1.copy(result = null)), extractedList)
+    }
+
+    @Test
+    fun `withResults = false ignores results in listBefore`() = runTest { historyManager, aliceUid, eveUid ->
+        val id1 = historyManager.storeEntry(aliceUid, CONFIG1, RESULTS1).getOrThrow()
+        val id2 = historyManager.storeEntry(aliceUid, CONFIG2, RESULTS2).getOrThrow()
+
+        val extracted1 = historyManager.getEntryById(aliceUid, id1).getOrThrow()
+
+        val extractedList = historyManager.listEntriesBefore(aliceUid, id2, limit = 1, withResults = false).getOrThrow()
+        assertEquals(listOf(extracted1.copy(result = null)), extractedList)
     }
 
     private fun runTest(action: suspend CoroutineScope.(historyManager: HistoryManager, alice: UserId, eve: UserId) -> Unit) {

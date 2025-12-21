@@ -219,6 +219,12 @@ class SkynonsClientApiMock : SkynonsClientApi {
         }
     }
 
+    override suspend fun stopSimulation(simulationId: SimulationId): ApiResult<Unit> =
+        ApiResult.ServerError("Unsupported feature")
+
+    override suspend fun suspendSimulation(simulationId: SimulationId): ApiResult<Unit> =
+        ApiResult.Success(Unit)
+
     override suspend fun authenticate(
         login: String,
         password: String,
@@ -244,6 +250,7 @@ class SkynonsClientApiMock : SkynonsClientApi {
     override suspend fun listHistory(
         beforeEntryId: HistoryEntryId?,
         limit: Int?,
+        withResults: Boolean,
     ): ApiResult<HistoryEntryList> = ApiResult.ServerError("Unsupported feature")
 
     override suspend fun getHistoryEntry(entryId: HistoryEntryId): ApiResult<HistoryEntry> =

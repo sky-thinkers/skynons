@@ -34,6 +34,8 @@ COPY --from=backend-builder /home/builder/repo/outputs/nons /server/bin/nons
 COPY backend/config /server/
 ENV NONS_PATH=/server/bin/nons
 RUN useradd -s /bin/bash server
+RUN mkdir -p /data/blobs && chown server:server /data/blobs && chmod 700 /data/blobs
+ENV BLOB_STORAGE_PATH=/data/blobs
 USER server
 WORKDIR /tmp/server
 CMD ["/server/bin/server"]

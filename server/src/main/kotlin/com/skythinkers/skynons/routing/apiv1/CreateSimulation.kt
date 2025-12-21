@@ -5,6 +5,8 @@ import com.skythinkers.skynons.api.CreateSimulationWithConfigRequest
 import com.skythinkers.skynons.api.EmptyMessage
 import com.skythinkers.skynons.api.ErrorResponseData
 import com.skythinkers.skynons.api.RestoreSimulationRequest
+import com.skythinkers.skynons.api.SimulationApiMessage
+import com.skythinkers.skynons.api.SimulationState
 import com.skythinkers.skynons.auth.UserSession
 import com.skythinkers.skynons.auth.uid
 import com.skythinkers.skynons.history.HistoryManager
@@ -32,7 +34,7 @@ import kotlin.io.path.writeText
 fun Route.createSimulation(processManager: NonsProcessManager) {
     val logger = KtorSimpleLogger("API/V1/create_simulation")
     post("/create_simulation") {
-        createImpl(processManager, logger) {
+        createImpl<EmptyMessage>(processManager, logger) {
             null
         }
     }
@@ -41,7 +43,7 @@ fun Route.createSimulation(processManager: NonsProcessManager) {
 fun Route.createSimulationWithConfig(processManager: NonsProcessManager) {
     val logger = KtorSimpleLogger("API/V1/create_with_config")
     post("/create_with_config") {
-        createImpl(processManager, logger) {
+        createImpl<SimulationState>(processManager, logger) {
             call.receive<CreateSimulationWithConfigRequest>().config
         }
     }
@@ -51,7 +53,7 @@ fun Route.restoreFromHistory(processManager: NonsProcessManager, historyManager:
     val logger = KtorSimpleLogger("API/V1/restore_from_history")
     authenticate(UserSession.USER_SESSION) {
         post("/restore/{id}") {
-            createImpl(processManager, logger) {
+            createImpl<SimulationState>(processManager, logger) {
                 val session: UserSession = call.principal<UserSession>(UserSession.USER_SESSION)!!
                 val id = call.parameters["id"]?.toLongOrNull() ?: run {
                     call.respond(
@@ -72,7 +74,7 @@ fun Route.restoreFromHistory(processManager: NonsProcessManager, historyManager:
     }
 }
 
-private suspend inline fun RoutingContext.createImpl(
+private suspend inline fun <reified R : SimulationApiMessage>RoutingContext.createImpl(
     processManager: NonsProcessManager,
     logger: Logger,
     getConfigImpl: () -> String?,
@@ -92,7 +94,7 @@ private suspend inline fun RoutingContext.createImpl(
             )
         } else {
             if (tmpConfig != null) {
-                val isError = processManager.expectResponse<EmptyMessage>(
+                val isError = processManager.expectResponse<R>(
                     procId,
                     RestoreSimulationRequest(tmpConfig.absolutePathString()),
                     logger

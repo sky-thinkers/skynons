@@ -29,6 +29,8 @@ services:
     depends_on:
       db:
         condition: service_started
+    volumes:
+      - blob-store:/data/blobs
     ports:
       - 127.0.0.1:${SERVER_PORT}:${SERVER_PORT}
     networks:
@@ -42,6 +44,7 @@ services:
       - DB_EMBEDDED=false
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_PEPPER=${AUTH_PEPPER}
+      - CONTINUATION_CONVERSATION_TIMEOUT=${CONTINUATION_CONVERSATION_TIMEOUT}
 
   db:
     image: postgres:16.1
@@ -58,6 +61,7 @@ services:
 
 volumes:
   db-data: {}
+  blob-store: {}
 networks:
   skynons:
     name: skynons_network

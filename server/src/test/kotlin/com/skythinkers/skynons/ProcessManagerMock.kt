@@ -56,6 +56,8 @@ class ProcessManagerMock : NonsProcessManager {
         simulations.remove(id)
     }
 
+    override suspend fun suspendProcess(id: ProcessId) {}
+
     private fun ensureActive() {
         require(!isClosed)
     }

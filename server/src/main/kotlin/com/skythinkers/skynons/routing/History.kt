@@ -13,7 +13,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
-import io.ktor.server.routing.post
 import io.ktor.util.logging.KtorSimpleLogger
 import io.ktor.util.logging.Logger
 
@@ -34,10 +33,12 @@ fun Route.history(historyManager: HistoryManager) {
             }
             val limit = limit { return@get }
 
+            val withRes = call.parameters["withResults"] == "true"
+
             val res = if (beforeId == null) {
-                historyManager.listLastEntries(session.uid, limit)
+                historyManager.listLastEntries(session.uid, limit, withRes)
             } else {
-                historyManager.listEntriesBefore(session.uid, beforeId, limit)
+                historyManager.listEntriesBefore(session.uid, beforeId, limit, withRes)
             }
                 .getOrElse {
                     handleHistoryError(logger, it) { return@get }

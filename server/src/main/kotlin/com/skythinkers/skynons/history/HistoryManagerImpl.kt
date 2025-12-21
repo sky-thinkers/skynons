@@ -52,9 +52,10 @@ class HistoryManagerImpl(
     override suspend fun listLastEntries(
         owner: UserId,
         limit: Int,
+        withResults: Boolean,
     ): Result<List<HistoryEntry>> {
         return when (val res = database.listHistoryLastEntries(owner, limit)) {
-            is DatabaseResult.Success<List<ExtractedHistoryEntryData>> -> mapExtractedData(owner, res.res)
+            is DatabaseResult.Success<List<ExtractedHistoryEntryData>> -> mapExtractedData(owner, res.res, withResults)
             !is DatabaseResult.Error -> throw AssertionError("unreachable")
             is DatabaseResult.NotFound -> Result.failure(HistoryEntryNotFoundException("No such entry", res.asException()))
             else -> errorRes("Unknown error", res.asException())
@@ -65,9 +66,10 @@ class HistoryManagerImpl(
         owner: UserId,
         beforeId: HistoryEntryId,
         limit: Int,
+        withResults: Boolean,
     ): Result<List<HistoryEntry>> {
         return when (val res = database.listHistoryBeforeEntryId(owner, beforeId, limit)) {
-            is DatabaseResult.Success<List<ExtractedHistoryEntryData>> -> mapExtractedData(owner, res.res)
+            is DatabaseResult.Success<List<ExtractedHistoryEntryData>> -> mapExtractedData(owner, res.res, withResults)
             !is DatabaseResult.Error -> throw AssertionError("unreachable")
             is DatabaseResult.NotFound -> Result.failure(HistoryEntryNotFoundException("No such entry", res.asException()))
             else -> errorRes("Unknown error", res.asException())
@@ -76,7 +78,7 @@ class HistoryManagerImpl(
 
     override suspend fun getEntryById(owner: UserId, id: HistoryEntryId): Result<HistoryEntry> {
         return when (val res = database.getHistoryEntryById(owner, id)) {
-            is DatabaseResult.Success<ExtractedHistoryEntryData> -> mapExtractedData(owner, res.res)
+            is DatabaseResult.Success<ExtractedHistoryEntryData> -> mapExtractedData(owner, res.res, withResults = true)
             !is DatabaseResult.Error -> throw AssertionError("unreachable")
             is DatabaseResult.NotFound -> Result.failure(HistoryEntryNotFoundException("No such entry", res.asException()))
             else -> errorRes("Unknown error", res.asException())
@@ -86,12 +88,15 @@ class HistoryManagerImpl(
     private suspend fun mapExtractedData(
         owner: UserId,
         extractedData: ExtractedHistoryEntryData,
+        withResults: Boolean,
     ): Result<HistoryEntry> {
         val config = blobStorage.readText(owner, extractedData.configRef)
             .getOrElse { return errorRes("Failed to read config blob", it) }
-        val results = extractedData.resultRef?.let { blobStorage.readText(owner, it) }
-            ?.mapCatching { serializer.decodeFromString<SimpleSimulationResult>(it) }
-            ?.getOrElse { return errorRes("Failed to read results blob", it) }
+        val results = if (withResults) {
+            extractedData.resultRef?.let { blobStorage.readText(owner, it) }
+                ?.mapCatching { serializer.decodeFromString<SimpleSimulationResult>(it) }
+                ?.getOrElse { return errorRes("Failed to read results blob", it) }
+        } else null
 
         return Result.success(
             HistoryEntry(
@@ -106,9 +111,10 @@ class HistoryManagerImpl(
     private suspend fun mapExtractedData(
         owner: UserId,
         list: List<ExtractedHistoryEntryData>,
+        withResults: Boolean,
     ): Result<List<HistoryEntry>> {
         return list.map {
-            mapExtractedData(owner, it)
+            mapExtractedData(owner, it, withResults)
                 .getOrElse { return Result.failure(it) }
         }.let { Result.success(it) }
     }
