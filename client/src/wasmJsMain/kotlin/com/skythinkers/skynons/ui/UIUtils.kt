@@ -261,7 +261,6 @@ fun FourInputsDialog(
                     keyboardActions = KeyboardActions(
                         onNext = {
                             onConfirm(input1, input2, input3, input4)
-//                            onDismissRequest()
                         }
                     )
                 )
@@ -271,7 +270,6 @@ fun FourInputsDialog(
             TextButton(
                 onClick = {
                     onConfirm(input1, input2, input3, input4)
-//                    onDismissRequest()
                 }
             ) {
                 Text("Confirm")
