@@ -2,7 +2,6 @@ package com.skythinkers.skynons.nons
 
 import com.skythinkers.skynons.api.SaveSimulationRequest
 import com.skythinkers.skynons.api.SimulationApiMessage
-import com.skythinkers.skynons.api.SimulationStateRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
@@ -24,7 +23,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
@@ -61,11 +59,7 @@ class ActiveNonsProcess(
                         sendSerialized(msg.msg)
                         log.trace("Awaiting response")
 
-                        val response = if (msg.msg is SimulationStateRequest) {
-                            runCatching { Json.decodeFromString<SimulationApiMessage>(receiveDeserialized<String>()) }
-                        } else {
-                            runCatching { receiveDeserialized<SimulationApiMessage>() }
-                        }
+                        val response = runCatching { receiveDeserialized<SimulationApiMessage>() }
 
                         log.trace(
                             "Got response of type {}",
