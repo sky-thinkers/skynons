@@ -924,6 +924,14 @@ private fun ImportConfigButton(
     }
 }
 
+enum class BigGraph {
+    NONE,
+    RTT,
+    CWND,
+    RATE,
+    REORDERING
+}
+
 @Composable
 fun GraphRedactor(
     localContext: PlatformContext,
@@ -946,6 +954,7 @@ fun GraphRedactor(
     var buttonEnabled by remember { mutableStateOf(true) }
     var buttonText by remember { mutableStateOf("Simulate") }
 
+    var bigGraph by remember { mutableStateOf(BigGraph.NONE) }
     var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var cwndSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var rateSvg by remember { mutableStateOf<ImageRequest?>(null) }
@@ -1073,6 +1082,7 @@ fun GraphRedactor(
             // Кнопка старта симуляции
             Button(
                 onClick = {
+                    bigGraph = BigGraph.NONE
                     buttonEnabled = false
                     buttonText = "Simulating..."
                     state.clearError()
@@ -1121,18 +1131,53 @@ fun GraphRedactor(
         ) {
             if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
                 Row {
-                    rttSvg!!.toImage("RTT graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
-                    cwndSvg!!.toImage("CWND graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
+                    rttSvg!!.toImage("RTT graph", Modifier.weight(0.5f).padding(10.dp), imageLoader) {
+                        bigGraph = BigGraph.RTT
+                    }
+                    cwndSvg!!.toImage("CWND graph", Modifier.weight(0.5f).padding(10.dp), imageLoader) {
+                        bigGraph = BigGraph.CWND
+                    }
                 }
                 Row {
-                    rateSvg!!.toImage("Rate graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
+                    rateSvg!!.toImage("Rate graph", Modifier.weight(0.5f).padding(10.dp), imageLoader) {
+                        bigGraph = BigGraph.RATE
+                    }
                     packetReorderingSvg!!.toImage(
                         "Packet reordering graph",
                         Modifier.weight(0.5f).padding(10.dp),
                         imageLoader
-                    )
+                    ) {
+                        bigGraph = BigGraph.REORDERING
+                    }
                 }
             }
+        }
+
+        when (bigGraph) {
+            BigGraph.NONE -> {}
+            BigGraph.RTT -> rttSvg!!.toImage(
+                "RTT graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
+
+            BigGraph.CWND -> cwndSvg!!.toImage(
+                "CWND graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
+
+            BigGraph.RATE -> rateSvg!!.toImage(
+                "Rate graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
+
+            BigGraph.REORDERING -> packetReorderingSvg!!.toImage(
+                "Packet reordering graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
         }
     }
 }
