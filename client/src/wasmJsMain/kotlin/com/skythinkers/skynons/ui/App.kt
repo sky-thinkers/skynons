@@ -64,7 +64,6 @@ import com.skythinkers.skynons.api.resultOrNull
 import io.ktor.utils.io.core.toByteArray
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -985,7 +984,7 @@ fun GraphRedactor(
         horizontalArrangement = Arrangement.Center,
     ) {
         Column(
-            modifier = Modifier.weight(0.4f).padding(5.dp),
+            modifier = Modifier.weight(0.5f).padding(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -1017,8 +1016,9 @@ fun GraphRedactor(
                 SingleInputDialog(
                     onDismissRequest = { showHostDialog = false },
                     onConfirm = { input ->
-                        showHostDialog = false
-                        state.tryAddHost(input)
+                        state.tryAddHost(input) {
+                            showHostDialog = false
+                        }
                     },
                     title = "Enter new host name",
                     label = "Name"
@@ -1029,8 +1029,9 @@ fun GraphRedactor(
                 SingleInputDialog(
                     onDismissRequest = { showSwitchDialog = false },
                     onConfirm = { input ->
-                        showSwitchDialog = false
-                        state.tryAddSwitch(input)
+                        state.tryAddSwitch(input) {
+                            showSwitchDialog = false
+                        }
                     },
                     title = "Enter new switch name",
                     label = "Name"
@@ -1041,8 +1042,9 @@ fun GraphRedactor(
                 FourInputsDialog(
                     onDismissRequest = { showLinkDialog = false },
                     onConfirm = { name, from, to, speed ->
-                        showLinkDialog = false
-                        state.tryAddLink(name, from, to, speed)
+                        state.tryAddLink(name, from, to, speed) {
+                            showLinkDialog = false
+                        }
                     },
                     title = "Enter new link data",
                     label1 = "Link's name",
@@ -1056,7 +1058,9 @@ fun GraphRedactor(
                 FourInputsDialog(
                     onDismissRequest = { showConnectionDialog = false },
                     onConfirm = { name, sender, receiver, size ->
-                        state.tryAddConnection(name, sender, receiver, size)
+                        state.tryAddConnection(name, sender, receiver, size) {
+                            showConnectionDialog = false
+                        }
                     },
                     title = "Enter new connection data",
                     label1 = "Connection name",
@@ -1111,18 +1115,22 @@ fun GraphRedactor(
 
         // Графы
         Column(
-            modifier = Modifier.weight(0.6f).padding(5.dp),
+            modifier = Modifier.weight(0.5f).padding(5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
                 Row {
-                    rttSvg!!.toImage("RTT graph", screenWidth, imageLoader)
-                    cwndSvg!!.toImage("CWND graph", screenWidth, imageLoader)
+                    rttSvg!!.toImage("RTT graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
+                    cwndSvg!!.toImage("CWND graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
                 }
                 Row {
-                    rateSvg!!.toImage("Rate graph", screenWidth, imageLoader)
-                    packetReorderingSvg!!.toImage("Packet reordering graph", screenWidth, imageLoader)
+                    rateSvg!!.toImage("Rate graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
+                    packetReorderingSvg!!.toImage(
+                        "Packet reordering graph",
+                        Modifier.weight(0.5f).padding(10.dp),
+                        imageLoader
+                    )
                 }
             }
         }
