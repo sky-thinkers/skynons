@@ -1152,32 +1152,32 @@ fun GraphRedactor(
                 }
             }
         }
+    }
 
-        when (bigGraph) {
-            BigGraph.NONE -> {}
-            BigGraph.RTT -> rttSvg!!.toImage(
-                "RTT graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
-                imageLoader
-            ) { bigGraph = BigGraph.NONE }
+    when (bigGraph) {
+        BigGraph.NONE -> {}
+        BigGraph.RTT -> rttSvg!!.toImage(
+            "RTT graph",
+            Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+            imageLoader
+        ) { bigGraph = BigGraph.NONE }
 
-            BigGraph.CWND -> cwndSvg!!.toImage(
-                "CWND graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
-                imageLoader
-            ) { bigGraph = BigGraph.NONE }
+        BigGraph.CWND -> cwndSvg!!.toImage(
+            "CWND graph",
+            Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+            imageLoader
+        ) { bigGraph = BigGraph.NONE }
 
-            BigGraph.RATE -> rateSvg!!.toImage(
-                "Rate graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
-                imageLoader
-            ) { bigGraph = BigGraph.NONE }
+        BigGraph.RATE -> rateSvg!!.toImage(
+            "Rate graph",
+            Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+            imageLoader
+        ) { bigGraph = BigGraph.NONE }
 
-            BigGraph.REORDERING -> packetReorderingSvg!!.toImage(
-                "Packet reordering graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
-                imageLoader
-            ) { bigGraph = BigGraph.NONE }
-        }
+        BigGraph.REORDERING -> packetReorderingSvg!!.toImage(
+            "Packet reordering graph",
+            Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+            imageLoader
+        ) { bigGraph = BigGraph.NONE }
     }
 }
