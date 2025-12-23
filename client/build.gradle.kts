@@ -28,6 +28,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.coil.compose)
             implementation(libs.coil.svg)
+            implementation(libs.material.icons.core)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
 

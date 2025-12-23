@@ -2,6 +2,7 @@
 kotlin = "2.2.20"
 ktor = "3.3.0"
 coil = "3.3.0"
+icons = "1.7.3"
 logback = "1.4.14"
 androidx-lifecycle = "2.9.3"
 composeMultiplatform = "1.8.2"
@@ -23,6 +24,7 @@ ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "icons" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 exposed-datetime = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }

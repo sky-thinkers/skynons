@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import kotlinx.coroutines.delay
 
 object ButtonColor {
     val ADD = ButtonColors(
@@ -43,9 +42,9 @@ object ButtonColor {
 }
 
 @Composable
-fun ImageRequest.toImage(description: String, width: Int, imageLoader: ImageLoader) {
+fun ImageRequest.toImage(description: String, modifier: Modifier, imageLoader: ImageLoader) {
     Column(
-        modifier = Modifier.width((width * 0.2).dp).padding(10.dp),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
@@ -262,7 +261,6 @@ fun FourInputsDialog(
                     keyboardActions = KeyboardActions(
                         onNext = {
                             onConfirm(input1, input2, input3, input4)
-                            onDismissRequest()
                         }
                     )
                 )
@@ -272,7 +270,6 @@ fun FourInputsDialog(
             TextButton(
                 onClick = {
                     onConfirm(input1, input2, input3, input4)
-                    onDismissRequest()
                 }
             ) {
                 Text("Confirm")
