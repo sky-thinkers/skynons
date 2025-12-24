@@ -31,7 +31,6 @@ FROM eclipse-temurin:11 AS server
 RUN apt update && apt install gnuplot graphviz python3-graphviz gcc g++ -y
 COPY --from=builder /home/builder/repo/outputs/server /server
 COPY --from=backend-builder /home/builder/repo/outputs/nons /server/bin/nons
-COPY backend/config /server/
 ENV NONS_PATH=/server/bin/nons
 RUN useradd -s /bin/bash server
 RUN mkdir -p /data/blobs && chown server:server /data/blobs && chmod 700 /data/blobs
