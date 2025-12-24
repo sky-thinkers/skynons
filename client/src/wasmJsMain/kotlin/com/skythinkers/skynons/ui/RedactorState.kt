@@ -96,12 +96,17 @@ class RedactorState(
     fun tryAddHost(
         hostName: ObjectId,
         onSuccess: () -> Unit,
+        onError: ((String) -> Unit)? = null,
     ) {
         apiAction {
             val result = api.addHost(simulationId, hostName)
             val error = result.errorOrNull()
             if (error != null) {
-                showError("Could not add host: ${error.message}")
+                if (onError == null) {
+                    showError("Could not add host: ${error.message}")
+                } else {
+                    onError("Could not add host: ${error.message}")
+                }
             } else {
                 hostsList += Host(hostName)
                 onSuccess()
@@ -112,12 +117,17 @@ class RedactorState(
     fun tryAddSwitch(
         switchName: ObjectId,
         onSuccess: () -> Unit,
+        onError: ((String) -> Unit)? = null,
     ) {
         apiAction {
             val result = api.addSwitch(simulationId, switchName)
             val error = result.errorOrNull()
             if (error != null) {
-                showError("Could not add switch: ${error.message}")
+                if (onError == null) {
+                    showError("Could not add switch: ${error.message}")
+                } else {
+                    onError("Could not add switch: ${error.message}")
+                }
             } else {
                 switchesList += Switch(switchName)
                 onSuccess()
@@ -131,12 +141,17 @@ class RedactorState(
         to: ObjectId,
         speed: SpeedString,
         onSuccess: () -> Unit,
+        onError: ((String) -> Unit)? = null,
     ) {
         apiAction {
             val result = api.addLink(simulationId, linkName, from, to, speed)
             val error = result.errorOrNull()
             if (error != null) {
-                showError("Could not add link: ${error.message}")
+                if (onError == null) {
+                    showError("Could not add link: ${error.message}")
+                } else {
+                    onError("Could not add link: ${error.message}")
+                }
             } else {
                 linksList += Link(linkName, from, to, speed)
                 onSuccess()
@@ -150,12 +165,17 @@ class RedactorState(
         receiver: ObjectId,
         size: SizeString,
         onSuccess: () -> Unit,
+        onError: ((String) -> Unit)? = null,
     ) {
         apiAction {
             val result = api.addConnection(simulationId, connectionName, sender, receiver, size)
             val error = result.errorOrNull()
             if (error != null) {
-                showError("Could not add connection: ${error.message}")
+                if (onError == null) {
+                    showError("Could not add connection: ${error.message}")
+                } else {
+                    onError("Could not add connection: ${error.message}")
+                }
             } else {
                 connectionsList += Connection(connectionName, sender, receiver, size)
                 onSuccess()
