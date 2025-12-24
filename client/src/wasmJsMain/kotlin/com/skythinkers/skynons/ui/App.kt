@@ -924,6 +924,14 @@ private fun ImportConfigButton(
     }
 }
 
+enum class BigGraph {
+    NONE,
+    RTT,
+    CWND,
+    RATE,
+    REORDERING
+}
+
 @Composable
 fun GraphRedactor(
     localContext: PlatformContext,
@@ -946,6 +954,7 @@ fun GraphRedactor(
     var buttonEnabled by remember { mutableStateOf(true) }
     var buttonText by remember { mutableStateOf("Simulate") }
 
+    var bigGraph by remember { mutableStateOf(BigGraph.NONE) }
     var rttSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var cwndSvg by remember { mutableStateOf<ImageRequest?>(null) }
     var rateSvg by remember { mutableStateOf<ImageRequest?>(null) }
@@ -976,163 +985,201 @@ fun GraphRedactor(
         }
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Column(
-            modifier = Modifier.weight(0.5f).padding(5.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+    Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
         ) {
-            // Колонки объектов
-            Row(
-                modifier = Modifier
-                    .border(BorderStroke(1.dp, Color.Gray), shape = RoundedCornerShape(2.dp))
-                    .background(
-                        Color(0.8f, 0.8f, 0.8f),
-                        RoundedCornerShape(2)
-                    )
+            Column(
+                modifier = Modifier.weight(0.5f).padding(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                state.ObjectsList<Host>("Add host") {
-                    showHostDialog = true
+                // Колонки объектов
+                Row(
+                    modifier = Modifier
+                        .border(BorderStroke(1.dp, Color.Gray), shape = RoundedCornerShape(2.dp))
+                        .background(
+                            Color(0.8f, 0.8f, 0.8f),
+                            RoundedCornerShape(2)
+                        )
+                ) {
+                    state.ObjectsList<Host>("Add host") {
+                        showHostDialog = true
+                    }
+                    state.ObjectsList<Switch>("Add switch") {
+                        showSwitchDialog = true
+                    }
+                    state.ObjectsList<Link>("Add link") {
+                        showLinkDialog = true
+                    }
+                    state.ObjectsList<Connection>("Add connection") {
+                        showConnectionDialog = true
+                    }
                 }
-                state.ObjectsList<Switch>("Add switch") {
-                    showSwitchDialog = true
-                }
-                state.ObjectsList<Link>("Add link") {
-                    showLinkDialog = true
-                }
-                state.ObjectsList<Connection>("Add connection") {
-                    showConnectionDialog = true
-                }
-            }
 
-            // Диалоги
-            if (showHostDialog) {
-                SingleInputDialog(
-                    onDismissRequest = { showHostDialog = false },
-                    onConfirm = { input ->
-                        state.tryAddHost(input) {
-                            showHostDialog = false
+                // Диалоги
+                if (showHostDialog) {
+                    SingleInputDialog(
+                        onDismissRequest = { showHostDialog = false },
+                        onConfirm = { input ->
+                            state.tryAddHost(input) {
+                                showHostDialog = false
+                            }
+                        },
+                        title = "Enter new host name",
+                        label = "Name"
+                    )
+                }
+
+                if (showSwitchDialog) {
+                    SingleInputDialog(
+                        onDismissRequest = { showSwitchDialog = false },
+                        onConfirm = { input ->
+                            state.tryAddSwitch(input) {
+                                showSwitchDialog = false
+                            }
+                        },
+                        title = "Enter new switch name",
+                        label = "Name"
+                    )
+                }
+
+                if (showLinkDialog) {
+                    FourInputsDialog(
+                        onDismissRequest = { showLinkDialog = false },
+                        onConfirm = { name, from, to, speed ->
+                            state.tryAddLink(name, from, to, speed) {
+                                showLinkDialog = false
+                            }
+                        },
+                        title = "Enter new link data",
+                        label1 = "Link's name",
+                        label2 = "First linked device name",
+                        label3 = "Second linked device name",
+                        label4 = "Link's speed"
+                    )
+                }
+
+                if (showConnectionDialog) {
+                    FourInputsDialog(
+                        onDismissRequest = { showConnectionDialog = false },
+                        onConfirm = { name, sender, receiver, size ->
+                            state.tryAddConnection(name, sender, receiver, size) {
+                                showConnectionDialog = false
+                            }
+                        },
+                        title = "Enter new connection data",
+                        label1 = "Connection name",
+                        label2 = "Sender name",
+                        label3 = "Receiver name",
+                        label4 = "Size of the transferred data"
+                    )
+                }
+
+                // Кнопка старта симуляции
+                Button(
+                    onClick = {
+                        bigGraph = BigGraph.NONE
+                        buttonEnabled = false
+                        buttonText = "Simulating..."
+                        state.clearError()
+                        state.apiAction {
+                            val response = api.simulate(simulationId)
+                            val result = response.resultOrNull()
+                            buttonEnabled = true
+                            buttonText = "Simulate"
+                            if (result != null) {
+                                rttSvg =
+                                    ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
+                                cwndSvg =
+                                    ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
+                                rateSvg =
+                                    ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
+                                packetReorderingSvg =
+                                    ImageRequest.Builder(localContext)
+                                        .data(result.packetReordering.toByteArray())
+                                        .build()
+                            } else {
+                                state.showError(response.errorOrNull()?.message ?: "Непредвиденная ошибка")
+                            }
                         }
                     },
-                    title = "Enter new host name",
-                    label = "Name"
-                )
+                    enabled = buttonEnabled
+                ) {
+                    Text(buttonText)
+                }
+
+                // Сообщение об ошибке
+                AnimatedVisibility(state.errorMessageVisible) {
+                    SelectionContainer {
+                        Text(
+                            state.errorMessage,
+                            modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
+                        )
+                    }
+                }
             }
 
-            if (showSwitchDialog) {
-                SingleInputDialog(
-                    onDismissRequest = { showSwitchDialog = false },
-                    onConfirm = { input ->
-                        state.tryAddSwitch(input) {
-                            showSwitchDialog = false
+            // Графы
+            Column(
+                modifier = Modifier.weight(0.5f).padding(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
+                    Row {
+                        rttSvg!!.toImage("RTT graph", Modifier.weight(0.5f).padding(10.dp), imageLoader) {
+                            bigGraph = BigGraph.RTT
                         }
-                    },
-                    title = "Enter new switch name",
-                    label = "Name"
-                )
-            }
-
-            if (showLinkDialog) {
-                FourInputsDialog(
-                    onDismissRequest = { showLinkDialog = false },
-                    onConfirm = { name, from, to, speed ->
-                        state.tryAddLink(name, from, to, speed) {
-                            showLinkDialog = false
-                        }
-                    },
-                    title = "Enter new link data",
-                    label1 = "Link's name",
-                    label2 = "First linked device name",
-                    label3 = "Second linked device name",
-                    label4 = "Link's speed"
-                )
-            }
-
-            if (showConnectionDialog) {
-                FourInputsDialog(
-                    onDismissRequest = { showConnectionDialog = false },
-                    onConfirm = { name, sender, receiver, size ->
-                        state.tryAddConnection(name, sender, receiver, size) {
-                            showConnectionDialog = false
-                        }
-                    },
-                    title = "Enter new connection data",
-                    label1 = "Connection name",
-                    label2 = "Sender name",
-                    label3 = "Receiver name",
-                    label4 = "Size of the transferred data"
-                )
-            }
-
-            // Кнопка старта симуляции
-            Button(
-                onClick = {
-                    buttonEnabled = false
-                    buttonText = "Simulating..."
-                    state.clearError()
-                    state.apiAction {
-                        val response = api.simulate(simulationId)
-                        val result = response.resultOrNull()
-                        buttonEnabled = true
-                        buttonText = "Simulate"
-                        if (result != null) {
-                            rttSvg =
-                                ImageRequest.Builder(localContext).data(result.rtt.toByteArray()).build()
-                            cwndSvg =
-                                ImageRequest.Builder(localContext).data(result.cwnd.toByteArray()).build()
-                            rateSvg =
-                                ImageRequest.Builder(localContext).data(result.rate.toByteArray()).build()
-                            packetReorderingSvg =
-                                ImageRequest.Builder(localContext)
-                                    .data(result.packetReordering.toByteArray())
-                                    .build()
-                        } else {
-                            state.showError(response.errorOrNull()?.message ?: "Непредвиденная ошибка")
+                        cwndSvg!!.toImage("CWND graph", Modifier.weight(0.5f).padding(10.dp), imageLoader) {
+                            bigGraph = BigGraph.CWND
                         }
                     }
-                },
-                enabled = buttonEnabled
-            ) {
-                Text(buttonText)
-            }
-
-            // Сообщение об ошибке
-            AnimatedVisibility(state.errorMessageVisible) {
-                SelectionContainer {
-                    Text(
-                        state.errorMessage,
-                        modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
-                    )
+                    Row {
+                        rateSvg!!.toImage("Rate graph", Modifier.weight(0.5f).padding(10.dp), imageLoader) {
+                            bigGraph = BigGraph.RATE
+                        }
+                        packetReorderingSvg!!.toImage(
+                            "Packet reordering graph",
+                            Modifier.weight(0.5f).padding(10.dp),
+                            imageLoader
+                        ) {
+                            bigGraph = BigGraph.REORDERING
+                        }
+                    }
                 }
             }
         }
 
-        // Графы
-        Column(
-            modifier = Modifier.weight(0.5f).padding(5.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (rttSvg != null && cwndSvg != null && rateSvg != null && packetReorderingSvg != null) {
-                Row {
-                    rttSvg!!.toImage("RTT graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
-                    cwndSvg!!.toImage("CWND graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
-                }
-                Row {
-                    rateSvg!!.toImage("Rate graph", Modifier.weight(0.5f).padding(10.dp), imageLoader)
-                    packetReorderingSvg!!.toImage(
-                        "Packet reordering graph",
-                        Modifier.weight(0.5f).padding(10.dp),
-                        imageLoader
-                    )
-                }
-            }
+        when (bigGraph) {
+            BigGraph.NONE -> {}
+            BigGraph.RTT -> rttSvg!!.toImage(
+                "RTT graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
+
+            BigGraph.CWND -> cwndSvg!!.toImage(
+                "CWND graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
+
+            BigGraph.RATE -> rateSvg!!.toImage(
+                "Rate graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
+
+            BigGraph.REORDERING -> packetReorderingSvg!!.toImage(
+                "Packet reordering graph",
+                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                imageLoader
+            ) { bigGraph = BigGraph.NONE }
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.skythinkers.skynons.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -42,7 +43,7 @@ object ButtonColor {
 }
 
 @Composable
-fun ImageRequest.toImage(description: String, modifier: Modifier, imageLoader: ImageLoader) {
+fun ImageRequest.toImage(description: String, modifier: Modifier, imageLoader: ImageLoader, onClick: () -> Unit) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -51,7 +52,7 @@ fun ImageRequest.toImage(description: String, modifier: Modifier, imageLoader: I
             model = this@toImage,
             imageLoader = imageLoader,
             contentDescription = description,
-            modifier = Modifier.background(Color.White, RoundedCornerShape(7))
+            modifier = Modifier.background(Color.White, RoundedCornerShape(7)).clickable(onClick = onClick)
         )
         Text(description)
     }
