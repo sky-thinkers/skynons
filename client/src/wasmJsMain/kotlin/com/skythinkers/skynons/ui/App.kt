@@ -393,6 +393,30 @@ fun RegisterPage(
                     val focusRequester2 = remember { FocusRequester() }
                     val focusRequester3 = remember { FocusRequester() }
 
+                    val createAccount = {
+                        if (loginInput != "" && passwordInput != "") {
+                            if (passwordInput != passwordRepeatInput) {
+                                errorMessage = "Пароли должны совпадать"
+                            } else {
+                                scope.launch(Dispatchers.Default) {
+                                    try {
+                                        val response = api.register(loginInput, passwordInput)
+                                        val result = response.resultOrNull()
+                                        if (result != null) {
+                                            errorMessage = ""
+                                            onAuthorized(result.login)
+                                        } else {
+                                            val error = response.errorOrNull()
+                                            errorMessage = error?.message ?: "Unexpected error"
+                                        }
+                                    } catch (e: Exception) {
+                                        errorMessage = "Unexpected error: ${e.message}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     Text("Регистрация")
 
                     TextField(
@@ -431,7 +455,7 @@ fun RegisterPage(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(
                             onNext = {
-                                focusRequester1.requestFocus()
+                                createAccount()
                             }
                         ),
                         visualTransformation = PasswordVisualTransformation(),
@@ -443,27 +467,7 @@ fun RegisterPage(
 
                     Button(
                         onClick = {
-                            if (loginInput != "" && passwordInput != "") {
-                                if (passwordInput != passwordRepeatInput) {
-                                    errorMessage = "Пароли должны совпадать"
-                                } else {
-                                    scope.launch(Dispatchers.Default) {
-                                        try {
-                                            val response = api.register(loginInput, passwordInput)
-                                            val result = response.resultOrNull()
-                                            if (result != null) {
-                                                errorMessage = ""
-                                                onAuthorized(result.login)
-                                            } else {
-                                                val error = response.errorOrNull()
-                                                errorMessage = error?.message ?: "Unexpected error"
-                                            }
-                                        } catch (e: Exception) {
-                                            errorMessage = "Unexpected error: ${e.message}"
-                                        }
-                                    }
-                                }
-                            }
+                            createAccount()
                         },
                         shape = RoundedCornerShape(10),
                         colors = ButtonColor.ADD
