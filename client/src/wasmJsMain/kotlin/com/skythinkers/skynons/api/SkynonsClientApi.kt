@@ -50,7 +50,7 @@ interface SkynonsClientApi {
 
     suspend fun logout(): ApiResult<Unit>
 
-    suspend fun shortUserInfo(oldPassword: String, newPassword: String): ApiResult<ShortUserInfo>
+    suspend fun shortUserInfo(): ApiResult<ShortUserInfo>
 
     suspend fun listHistory(beforeEntryId: HistoryEntryId? = null, limit: Int? = null, withResults: Boolean): ApiResult<HistoryEntryList>
 
