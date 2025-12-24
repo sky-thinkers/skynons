@@ -1,10 +1,7 @@
 package com.skythinkers.skynons.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1165,27 +1162,28 @@ fun GraphRedactor(
 
         when (bigGraph) {
             BigGraph.NONE -> {}
+
             BigGraph.RTT -> rttSvg!!.toImage(
                 "RTT graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
 
             BigGraph.CWND -> cwndSvg!!.toImage(
                 "CWND graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
 
             BigGraph.RATE -> rateSvg!!.toImage(
                 "Rate graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
 
             BigGraph.REORDERING -> packetReorderingSvg!!.toImage(
                 "Packet reordering graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
         }
