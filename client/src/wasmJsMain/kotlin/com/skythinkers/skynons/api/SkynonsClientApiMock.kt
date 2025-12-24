@@ -242,10 +242,7 @@ class SkynonsClientApiMock : SkynonsClientApi {
 
     override suspend fun logout(): ApiResult<Unit> = ApiResult.ServerError("Unsupported feature")
 
-    override suspend fun shortUserInfo(
-        oldPassword: String,
-        newPassword: String,
-    ): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
+    override suspend fun shortUserInfo(): ApiResult<ShortUserInfo> = ApiResult.ServerError("Unsupported feature")
 
     override suspend fun listHistory(
         beforeEntryId: HistoryEntryId?,

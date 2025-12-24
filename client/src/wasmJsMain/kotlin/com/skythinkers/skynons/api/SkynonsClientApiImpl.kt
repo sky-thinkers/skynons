@@ -294,11 +294,8 @@ class SkynonsClientApiImpl(
         }
     }
 
-    override suspend fun shortUserInfo(
-        oldPassword: String,
-        newPassword: String,
-    ): ApiResult<ShortUserInfo> = callWrapper {
-        val response = httpClient.post(apiAddress + SHORT_INFO_ENDPOINT)
+    override suspend fun shortUserInfo(): ApiResult<ShortUserInfo> = callWrapper {
+        val response = httpClient.get(apiAddress + SHORT_INFO_ENDPOINT)
 
         return handleResponseDefault(response) { response ->
             val response = runCatching { response.body<ShortUserInfo>() }

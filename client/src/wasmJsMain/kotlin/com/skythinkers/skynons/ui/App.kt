@@ -50,6 +50,7 @@ import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
+import com.skythinkers.skynons.api.ApiResult
 import com.skythinkers.skynons.api.Connection
 import com.skythinkers.skynons.api.Host
 import com.skythinkers.skynons.api.Link
@@ -81,10 +82,16 @@ fun App() {
         var api by remember { mutableStateOf<SkynonsClientApi>(SkynonsClientApiImpl("")) }
         val scope = rememberCoroutineScope()
 
-        var clientLogin by remember { mutableStateOf("") }
+        var clientLogin by remember { mutableStateOf<String?>(null) }
         var hash by remember { mutableStateOf("") }
-        var authorizationStatus by remember { mutableStateOf(false) }
         var page by remember { mutableStateOf(Page.SIMULATOR) }
+
+        LaunchedEffect(api) {
+            clientLogin = when (val res = api.shortUserInfo()) {
+                is ApiResult.Success -> res.result.login
+                else -> null
+            }
+        }
 
         window.onhashchange = { e ->
             if (e.newURL.contains('#')) {
@@ -104,19 +111,15 @@ fun App() {
         when (page) {
             Page.SIMULATOR -> {
                 SimulatorPage(
-                    api, clientLogin, authorizationStatus, hash, apiType,
+                    api, clientLogin, hash, apiType,
                     onApiChanged = { newApi, type ->
                         api = newApi
                         apiType = type
                     },
                     onLogout = {
                         scope.launch(Dispatchers.Default) {
-                            try {
-                                api.logout()
-                            } catch (_: Exception) {
-                            } finally {
-                                authorizationStatus = false
-                            }
+                            runCatching { api.logout() }
+                            clientLogin = null
                         }
                     },
                     onLogin = {
@@ -133,7 +136,6 @@ fun App() {
                     api,
                     onAuthorized = { login ->
                         clientLogin = login
-                        authorizationStatus = true
                         page = Page.SIMULATOR
                     },
                     onTryRegister = {
@@ -150,7 +152,6 @@ fun App() {
                     api,
                     onAuthorized = { login ->
                         clientLogin = login
-                        authorizationStatus = true
                         page = Page.SIMULATOR
                     },
                     onTryLogin = {
@@ -165,7 +166,7 @@ fun App() {
             Page.CHANGE_PASS -> {
                 ChangePasswordPage(
                     api,
-                    clientLogin,
+                    clientLogin ?: "",
                     onReturn = {
                         page = Page.SIMULATOR
                     }
@@ -235,6 +236,26 @@ fun AuthorizationPage(
                     val focusRequester1 = remember { FocusRequester() }
                     val focusRequester2 = remember { FocusRequester() }
 
+                    val doLogin = {
+                        if (loginInput != "" && passwordInput != "") {
+                            scope.launch(Dispatchers.Default) {
+                                try {
+                                    val response = api.authenticate(loginInput, passwordInput)
+                                    val result = response.resultOrNull()
+                                    if (result != null) {
+                                        errorMessage = ""
+                                        onAuthorized(result.login)
+                                    } else {
+                                        val error = response.errorOrNull()
+                                        errorMessage = error?.message ?: "Unexpected error"
+                                    }
+                                } catch (e: Exception) {
+                                    errorMessage = "Unexpected error: ${e.message}"
+                                }
+                            }
+                        }
+                    }
+
                     Text("Вход в аккаунт")
 
                     TextField(
@@ -259,7 +280,7 @@ fun AuthorizationPage(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(
                             onNext = {
-                                focusRequester1.requestFocus()
+                                doLogin()
                             }
                         ),
                         visualTransformation = PasswordVisualTransformation(),
@@ -271,23 +292,7 @@ fun AuthorizationPage(
 
                     Button(
                         onClick = {
-                            if (loginInput != "" && passwordInput != "") {
-                                scope.launch(Dispatchers.Default) {
-                                    try {
-                                        val response = api.authenticate(loginInput, passwordInput)
-                                        val result = response.resultOrNull()
-                                        if (result != null) {
-                                            errorMessage = ""
-                                            onAuthorized(result.login)
-                                        } else {
-                                            val error = response.errorOrNull()
-                                            errorMessage = error?.message ?: "Unexpected error"
-                                        }
-                                    } catch (e: Exception) {
-                                        errorMessage = "Unexpected error: ${e.message}"
-                                    }
-                                }
-                            }
+                           doLogin()
                         },
                         shape = RoundedCornerShape(10),
                         colors = ButtonColor.ADD
@@ -656,8 +661,7 @@ fun ChangePasswordPage(
 @Composable
 fun SimulatorPage(
     api: SkynonsClientApi,
-    clientLogin: String,
-    authorizationStatus: Boolean,
+    clientLogin: String?,
     hash: String,
     apiType: String,
     onApiChanged: (SkynonsClientApi, String) -> Unit,
@@ -813,7 +817,7 @@ fun SimulatorPage(
                                 window.location.hash = "Simulator-$id"
                             }
 
-                            if (authorizationStatus) {
+                            if (clientLogin != null) {
                                 Button(
                                     onClick = onChangePassword,
                                     shape = RoundedCornerShape(10),
@@ -831,7 +835,7 @@ fun SimulatorPage(
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Row {
-                    if (authorizationStatus) {
+                    if (clientLogin != null) {
                         Text("Аккаунт: $clientLogin. ", modifier = Modifier.padding(5.dp))
                         Text(
                             buildAnnotatedString {
