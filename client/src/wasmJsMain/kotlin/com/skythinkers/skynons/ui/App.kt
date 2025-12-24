@@ -1,10 +1,7 @@
 package com.skythinkers.skynons.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -292,7 +289,7 @@ fun AuthorizationPage(
 
                     Button(
                         onClick = {
-                           doLogin()
+                            doLogin()
                         },
                         shape = RoundedCornerShape(10),
                         colors = ButtonColor.ADD
@@ -1031,39 +1028,57 @@ fun GraphRedactor(
 
                 // Диалоги
                 if (showHostDialog) {
+                    var errMsg by remember { mutableStateOf<String?>(null) }
                     SingleInputDialog(
                         onDismissRequest = { showHostDialog = false },
                         onConfirm = { input ->
-                            state.tryAddHost(input) {
-                                showHostDialog = false
-                            }
+                            state.tryAddHost(
+                                input,
+                                onSuccess = {
+                                    showHostDialog = false
+                                },
+                                onError = { errMsg = it }
+                            )
                         },
+                        errorMessage = errMsg,
                         title = "Enter new host name",
                         label = "Name"
                     )
                 }
 
                 if (showSwitchDialog) {
+                    var errMsg by remember { mutableStateOf<String?>(null) }
                     SingleInputDialog(
                         onDismissRequest = { showSwitchDialog = false },
                         onConfirm = { input ->
-                            state.tryAddSwitch(input) {
-                                showSwitchDialog = false
-                            }
+                            state.tryAddSwitch(
+                                input,
+                                onSuccess = {
+                                    showSwitchDialog = false
+                                },
+                                onError = { errMsg = it }
+                            )
                         },
+                        errorMessage = errMsg,
                         title = "Enter new switch name",
                         label = "Name"
                     )
                 }
 
                 if (showLinkDialog) {
+                    var errMsg by remember { mutableStateOf<String?>(null) }
                     FourInputsDialog(
                         onDismissRequest = { showLinkDialog = false },
                         onConfirm = { name, from, to, speed ->
-                            state.tryAddLink(name, from, to, speed) {
-                                showLinkDialog = false
-                            }
+                            state.tryAddLink(
+                                name, from, to, speed,
+                                onSuccess = {
+                                    showLinkDialog = false
+                                },
+                                onError = { errMsg = it }
+                            )
                         },
+                        errorMessage = errMsg,
                         title = "Enter new link data",
                         label1 = "Link's name",
                         label2 = "First linked device name",
@@ -1073,13 +1088,19 @@ fun GraphRedactor(
                 }
 
                 if (showConnectionDialog) {
+                    var errMsg by remember { mutableStateOf<String?>(null) }
                     FourInputsDialog(
                         onDismissRequest = { showConnectionDialog = false },
                         onConfirm = { name, sender, receiver, size ->
-                            state.tryAddConnection(name, sender, receiver, size) {
-                                showConnectionDialog = false
-                            }
+                            state.tryAddConnection(
+                                name, sender, receiver, size,
+                                onSuccess = {
+                                    showConnectionDialog = false
+                                },
+                                onError = { errMsg = it }
+                            )
                         },
+                        errorMessage = errMsg,
                         title = "Enter new connection data",
                         label1 = "Connection name",
                         label2 = "Sender name",
@@ -1165,27 +1186,28 @@ fun GraphRedactor(
 
         when (bigGraph) {
             BigGraph.NONE -> {}
+
             BigGraph.RTT -> rttSvg!!.toImage(
                 "RTT graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
 
             BigGraph.CWND -> cwndSvg!!.toImage(
                 "CWND graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
 
             BigGraph.RATE -> rateSvg!!.toImage(
                 "Rate graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
 
             BigGraph.REORDERING -> packetReorderingSvg!!.toImage(
                 "Packet reordering graph",
-                Modifier.width((screenWidth * 0.6).dp).padding(10.dp),
+                Modifier.width((screenWidth * 0.45).dp).padding((screenWidth * 0.05).dp),
                 imageLoader
             ) { bigGraph = BigGraph.NONE }
         }

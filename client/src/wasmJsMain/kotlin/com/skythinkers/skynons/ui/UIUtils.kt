@@ -1,11 +1,13 @@
 package com.skythinkers.skynons.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -65,6 +67,7 @@ fun SingleInputDialog(
     title: String,
     label: String,
     initialInput: String = "",
+    errorMessage: String?,
 ) {
     val focusRequester = remember { FocusRequester() }
     var textInput by remember { mutableStateOf(initialInput) }
@@ -73,26 +76,37 @@ fun SingleInputDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(title) },
         text = {
-            TextField(
-                value = textInput,
-                onValueChange = { textInput = it },
-                label = { Text(label) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = {
-                        onConfirm(textInput)
-                        onDismissRequest()
-                    }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TextField(
+                    value = textInput,
+                    onValueChange = { textInput = it },
+                    label = { Text(label) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(
+                        onNext = {
+                            onConfirm(textInput)
+                        }
+                    )
                 )
-            )
+                AnimatedVisibility(errorMessage != null) {
+                    SelectionContainer {
+                        Text(
+                            errorMessage!!,
+                            modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
+                        )
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     onConfirm(textInput)
-                    onDismissRequest()
                 }
             ) {
                 Text("Confirm")
@@ -112,6 +126,7 @@ fun SingleInputDialog(
     }
 }
 
+@Deprecated("No longer used")
 @Composable
 fun TwoInputsDialog(
     onDismissRequest: () -> Unit,
@@ -196,6 +211,7 @@ fun FourInputsDialog(
     label3: String,
     label4: String,
     initialInput: String = "",
+    errorMessage: String?,
 ) {
     val focusRequester1 = remember { FocusRequester() }
     val focusRequester2 = remember { FocusRequester() }
@@ -211,7 +227,8 @@ fun FourInputsDialog(
         title = { Text(title) },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 TextField(
                     value = input1,
@@ -265,6 +282,14 @@ fun FourInputsDialog(
                         }
                     )
                 )
+                AnimatedVisibility(errorMessage != null) {
+                    SelectionContainer {
+                        Text(
+                            errorMessage!!,
+                            modifier = Modifier.background(Color(1f, 0.5f, 0.5f), RoundedCornerShape(5))
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
